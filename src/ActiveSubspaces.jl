@@ -1,7 +1,12 @@
 module ActiveSubspaces
 
-# Write your package code here.
+# put all "using" packages here
+using ForwardDiff
+
+# Write your package code here
 include("examplefile.jl")
 
-export f
+# put all exports here
+export f, dfx
+
 end
