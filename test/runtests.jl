@@ -1,4 +1,6 @@
+using ActiveSubspaces
+using Test
 using SafeTestsets
 
-@safetestset "Derivative Tests" begin include("f_tests.jl") end
+@safetestset "Gibbs Tests" begin include("gibbs_tests.jl") end
 

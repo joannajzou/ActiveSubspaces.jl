@@ -1,12 +1,25 @@
 module ActiveSubspaces
 
-# put all "using" packages here
+# put all packages here
+using LinearAlgebra
+using Random
+using Statistics
+using StatsBase
+using Distributions
+using FastGaussQuadrature
 using ForwardDiff
+using JLD
 
-# Write your package code here
+
+# call on all src scripts here
 include("examplefile.jl")
+include("gibbs.jl")
+include("sampling.jl")
+include("qoi.jl")
+
 
 # put all exports here
 export f, dfx
+
 
 end
