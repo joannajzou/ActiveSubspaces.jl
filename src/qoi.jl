@@ -33,6 +33,7 @@ function Q(θ, qoi::QoI, ξ::Vector{T<:Real}, w::Vector{T<:Real})
     return sum(w * h̃.(ξ))
 end
 
+
 # compute QoI with importance sampling distribution
 function Q(θ, qoi::QoI, g::Distribution; kwargs...)
     A = Dict(kwargs)

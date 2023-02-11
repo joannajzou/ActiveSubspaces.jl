@@ -1,65 +1,58 @@
 ### define Gibbs distribution in Distribution.jl
 import Distributions: pdf, logpdf, gradlogpdf, sampler, insupport
-import Base: minimum, maximum, rand
+import Base: minimum, maximum, rand, @kwdef
 import StatsBase: params
 
-"""
-mutable struct Gibbs{T<:Real} <: Distribution{Univariate,Continuous}
-    V :: Function                                   # potential function with inputs (x,θ)
-    ∇xV :: Function                                 # gradient of potential wrt x
-    ∇θV :: Function                                 # gradient of potential wrt θ
-    β :: T                                          # diffusion/temperature constant
-    θ :: Union{T, Vector{T}, UndefInitializer}      # potential function parameters
-        
-Creates an instance of the Gibbs distribution, proportional to exp(V(x; β, θ)).
-It is required to instantiate Gibbs twice: first with the potential function and its derivatives, second with parameters of the distribution.
-"""
-mutable struct Gibbs{T<:Real} <: Distribution{Univariate,Continuous}
-    V :: Function                                   # potential function with inputs (x,θ)
-    ∇xV :: Function                                 # gradient of potential wrt x
-    ∇θV :: Function                                 # gradient of potential wrt θ
-    β :: Union{T, UndefInitializer}                 # diffusion/temperature constant
-    θ :: Union{T, Vector{T}, UndefInitializer}      # potential function parameters
+
+@kwdef mutable struct Gibbs <: Distribution{Univariate,Continuous}
+    V :: Function                                           # potential function with inputs (x,θ)
+    ∇xV :: Function                                         # gradient of potential wrt x
+    ∇θV :: Function                                         # gradient of potential wrt θ
+    β :: Union{Real, Nothing} = nothing                     # diffusion/temperature constant
+    θ :: Union{Real, Vector{<:Real}, Nothing} = nothing     # potential function parameters
 
 
-    # first inner constructor: instantiates new Gibbs object with undefined parameters
-    function Gibbs{T}(V::Function, ∇xV::Function, ∇θV::Function) where {T<:Real}
-        # create new instance
-        return new(V, ∇xV, ∇θV, undef, undef)
-
-    end
-
-    # second inner constructor: defines parameters of Gibbs object
-    function Gibbs{T}(d::Gibbs{T}, β::T, θ::Union{T, Vector{T}}; check_args=true) where {T<:Real}
+    # inner constructor 1: all arguments defined 
+    function Gibbs(V::Function, ∇xV::Function, ∇θV::Function, β::Real, θ::Union{Real, Vector{<:Real}}, check_args=true)
         # check arguments 
         check_args && Distributions.@check_args(Gibbs, β > 0)
 
-        # create new instance
-        V = x -> d.V(x, θ)
-        ∇xV = x -> d.∇xV(x, θ)
-        ∇θV = x -> d.∇θV(x, θ)
-        d̃ = new(V, ∇xV, ∇θV, β, θ)
-        return d̃
+        # redefine functions taking θ as argument 
+        d = new()
+        d.V = x -> V(x, θ)
+        d.∇xV = x -> ∇xV(x, θ)
+        d.∇θV = x -> ∇θV(x, θ)
+        d.β = β
+        d.θ = θ
+        return d
+
+    end
+
+    # inner constructor 2: defines all parameters except θ
+    function Gibbs(V::Function, ∇xV::Function, ∇θV::Function, β::Real, θ::Nothing)
+        return new(V, ∇xV, ∇θV, β, θ)
+
+    end
+
+    # inner constructor 3: defines functions only
+    function Gibbs(V::Function, ∇xV::Function, ∇θV::Function, β::Nothing, θ::Nothing)
+        return new(V, ∇xV, ∇θV, β, θ)
+
     end
 
 end
 
-
-# outer constructors: supply param type
-Gibbs(V::Function, ∇xV::Function, ∇θV::Function) = Gibbs{Float64}(V, ∇xV, ∇θV)
-Gibbs(d::Gibbs{Float64}, β::Float64, θ::Union{Float64, Vector{Float64}}; check_args=true) = Gibbs{Float64}(d, β, θ, check_args=check_args)
-
-# convert all params to type Float64
-Gibbs(d::Gibbs{Float64}, β::Real, θ::Real) = Gibbs(d, float(β), float(θ))
-Gibbs(d::Gibbs{Float64}, β::Real, θ::Vector{<:Real}) = Gibbs(d, float(β), float.(θ))
+# creates new Gibbs object with parameters defined
+function Gibbs!(d::Gibbs; β::Real=d.β, θ::Union{Real, Vector{<:Real}, Nothing}=nothing)
+    return Gibbs(V=d.V, ∇xV=d.∇xV, ∇θV=d.∇θV, β=β, θ=θ)
+end
 
 
-## extend functions
 # 0 - helper function
 params(d::Gibbs) = (d.β, d.θ)
 
 # 1 - random sampler
-rand(d::Gibbs, n::Int, mcmc::Sampler, x0) = sample(d, mcmc, x0=x0, nsamp=n)
+# rand(d::Gibbs, n::Int, mcmc::Sampler, x0) = sample(d, mcmc, x0=x0, nsamp=n)
 
 # 2 - unnormalized pdf
 updf(d::Gibbs, x) = exp(d.β * d.V(x))
