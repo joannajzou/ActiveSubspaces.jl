@@ -58,8 +58,21 @@ params(d::Gibbs) = (d.β, d.θ)
 updf(d::Gibbs, x) = exp(d.β * d.V(x))
 
 # 3 - normalization constant (partition function)
-# function normconst(d::Gibbs; nquad=false)
-#     ...
+function normconst(d::Gibbs, xdim::Integer, xdomain::Vector{<:Real}; nquad::Integer=10)
+    if xdim <= 3 # use Gauss quadrature integration
+        ξ, w = gausslegendre(nquad, xdomain[1], xdomain[2])
+        for j = 1:xdim
+            
+    
+        
+
+    elseif # use importance sampling integration
+        
+        nquad == 0 # determine nquad 
+        nquad = length(d.θ)
+
+    else # user-specified nquad 
+end
 # end
 
 # 4 - pdf
