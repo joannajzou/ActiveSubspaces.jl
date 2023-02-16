@@ -42,9 +42,21 @@ import StatsBase: params
 
 end
 
-# creates new Gibbs object with parameters defined
-function Gibbs!(d::Gibbs; β::Real=d.β, θ::Union{Real, Vector{<:Real}, Nothing}=nothing)
+
+# outer constructor 1: creates new Gibbs object with defined parameters
+function Gibbs(d::Gibbs; β::Real=d.β, θ::Union{Real, Vector{<:Real}, Nothing}=nothing)
     return Gibbs(V=d.V, ∇xV=d.∇xV, ∇θV=d.∇θV, β=β, θ=θ)
+end
+
+
+# outer constructure 2: modifies Gibbs object with defined parameters
+function Gibbs!(d::Gibbs; β::Real=d.β, θ::Union{Real, Vector{<:Real}, Nothing}=nothing)
+    d.V = x -> d.V(x, θ)
+    d.∇xV = x -> d.∇xV(x, θ)
+    d.∇θV = x -> d.∇θV(x, θ)
+    d.β = β
+    d.θ = θ
+    return d
 end
 
 
@@ -58,22 +70,28 @@ params(d::Gibbs) = (d.β, d.θ)
 updf(d::Gibbs, x) = exp(d.β * d.V(x))
 
 # 3 - normalization constant (partition function)
-function normconst(d::Gibbs, xdim::Integer, xdomain::Vector{<:Real}; nquad::Integer=10)
-    if xdim <= 3 # use Gauss quadrature integration
-        ξ, w = gausslegendre(nquad, xdomain[1], xdomain[2])
-        for j = 1:xdim
-            
-    
-        
+# function normconst(d::Gibbs, xdomain::Matrix{<:Real}; nquad=:false)
+#     xdim = size(xdomain, 1)
 
-    elseif # use importance sampling integration
-        
-        nquad == 0 # determine nquad 
-        nquad = length(d.θ)
+#     if nquad != false | xdim <= 3
 
-    else # user-specified nquad 
-end
+#         for k = 1:xdim
+#             ξk, wk = gausslegendre(nquad, xdomain[k,1], xdomain[k,2])
+
+#         xdim <= 3 # use Gauss quadrature integration
+#         ξ, w = gausslegendre(nquad, xdomain[1], xdomain[2])
+#         for j = 1:xdim
+
+
+#     elseif xdim # use importance sampling integration
+        
+#         nquad == 0 # determine nquad 
+#         nquad = length(d.θ)
+
+
+#     end
 # end
+
 
 # 4 - pdf
 pdf(d::Gibbs, x) = exp(d.β * d.V(x)) ./ normconst(d)

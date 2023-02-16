@@ -30,7 +30,7 @@ end
 
 
 # put all exports here
-export f, dfx
-export Gibbs, params, updf, pdf, logupdf, logpdf, gradlogpdf
+export f, dfx, gausslegendre
+export Gibbs, Gibbs!, params, updf, pdf, logupdf, logpdf, gradlogpdf
 
 end
