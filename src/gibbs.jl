@@ -42,21 +42,9 @@ import StatsBase: params
 
 end
 
-
-# outer constructor 1: creates new Gibbs object with defined parameters
+# outer constructor: creates new Gibbs object with defined parameters
 function Gibbs(d::Gibbs; β::Real=d.β, θ::Union{Real, Vector{<:Real}, Nothing}=nothing)
     return Gibbs(V=d.V, ∇xV=d.∇xV, ∇θV=d.∇θV, β=β, θ=θ)
-end
-
-
-# outer constructure 2: modifies Gibbs object with defined parameters
-function Gibbs!(d::Gibbs; β::Real=d.β, θ::Union{Real, Vector{<:Real}, Nothing}=nothing)
-    d.V = x -> d.V(x, θ)
-    d.∇xV = x -> d.∇xV(x, θ)
-    d.∇θV = x -> d.∇θV(x, θ)
-    d.β = β
-    d.θ = θ
-    return d
 end
 
 
@@ -64,7 +52,7 @@ end
 params(d::Gibbs) = (d.β, d.θ)
 
 # 1 - random sampler
-# rand(d::Gibbs, n::Int, mcmc::Sampler, x0) = sample(d, mcmc, x0=x0, nsamp=n)
+rand(d::Gibbs, n::Int, sampler::Sampler, ρ0::Distribution) = sample(d.V, d.∇xV, sampler, n, rand(ρ0))
 
 # 2 - unnormalized pdf
 updf(d::Gibbs, x) = exp(d.β * d.V(x))

@@ -8,14 +8,15 @@ using StatsBase
 using Distributions
 using FastGaussQuadrature
 using ForwardDiff
+using AdvancedHMC
 using JLD
 
 import FastGaussQuadrature: gausslegendre
 
-# call on all src scripts here
 
+# call on all src scripts here
 include("examplefile.jl")
-# include("sampling.jl")
+include("sampling.jl")
 include("gibbs.jl")
 # include("qoi.jl")
 
@@ -32,5 +33,6 @@ end
 # put all exports here
 export f, dfx, gausslegendre
 export Gibbs, Gibbs!, params, updf, pdf, logupdf, logpdf, gradlogpdf
+export HMC, NUTS, sample
 
 end
