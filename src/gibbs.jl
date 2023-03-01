@@ -58,28 +58,9 @@ rand(d::Gibbs, n::Int, sampler::Sampler, ρ0::Distribution) = sample(d.V, d.∇x
 updf(d::Gibbs, x) = exp(d.β * d.V(x))
 
 # 3 - normalization constant (partition function)
-# function normconst(d::Gibbs, xdomain::Matrix{<:Real}; nquad=:false)
-#     xdim = size(xdomain, 1)
-
-#     if nquad != false | xdim <= 3
-
-#         for k = 1:xdim
-#             ξk, wk = gausslegendre(nquad, xdomain[k,1], xdomain[k,2])
-
-#         xdim <= 3 # use Gauss quadrature integration
-#         ξ, w = gausslegendre(nquad, xdomain[1], xdomain[2])
-#         for j = 1:xdim
-
-
-#     elseif xdim # use importance sampling integration
-        
-#         nquad == 0 # determine nquad 
-#         nquad = length(d.θ)
-
-
-#     end
-# end
-
+function normconst(d::Gibbs, ξ::Vector, w::Vector)
+    return sum(w' * updf.(d, ξ))
+end
 
 # 4 - pdf
 pdf(d::Gibbs, x) = exp(d.β * d.V(x)) ./ normconst(d)
