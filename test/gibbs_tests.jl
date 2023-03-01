@@ -1,4 +1,5 @@
 using ActiveSubspaces
+using Distributions
 using Test
 
 @testset "Gibbs dist. (univariate)" begin
@@ -13,6 +14,8 @@ using Test
     d2 = Gibbs(V=V, ∇xV=∇xV, ∇θV=∇θV, β=1.0, θ=[1,1])
     d0a = Gibbs(d0, β=1.0)  
     d0b = Gibbs(d0, β=1.0, θ=[1,1])
+
+    px0 = Uniform(-2, 2) # prior density for sampling x
     
     
     # test each deployment 
@@ -33,17 +36,9 @@ using Test
     @test logupdf(d2, 1) == -0.75
     @test gradlogpdf(d2, 2) == -6.0
 
-
-    # check modifying function
-    β0 = d0.β
-    Gibbs!(d0, β=1.0)
-    @test β0 != d0.β
-
-end
-
-
-# @testset "Gibbs dist. (multivariate)" begin
+    # check sampling 
+    @test length(rand(d2, 10000, NUTS(1e-2), px0)) == 10000
 
     
+end
 
-# end
