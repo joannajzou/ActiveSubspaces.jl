@@ -10,7 +10,7 @@ Notes: A Julia library for implementing active subspaces for QoI-based dimension
 """
 module ActiveSubspaces
 
-# put all packages here
+# load packages
 using LinearAlgebra
 using Random
 using Statistics
@@ -21,17 +21,20 @@ using ForwardDiff
 using AdvancedHMC
 using JLD
 
-import FastGaussQuadrature: gausslegendre
 
+# call on src scripts
+include("Sampling/sampling.jl")
 
-# call on all src scripts here
-include("examplefile.jl")
-include("sampling.jl")
-include("gibbs.jl")
-include("qoi.jl")
+include("Distributions/distributions.jl")
+
+include("QoI/qoi.jl")
+
+include("Subspaces/subspaces.jl")
 
 
 # computes Gauss Legendre quadrature points with change of domain
+import FastGaussQuadrature: gausslegendre
+
 function gausslegendre(npts, ll, ul)
     ξ, w = gausslegendre(npts) 
     ξz = (ul-ll) .* ξ / 2 .+ (ll+ul) / 2 # change of interval
@@ -39,11 +42,7 @@ function gausslegendre(npts, ll, ul)
     return ξz, wz
 end
 
+export gausslegendre
 
-# put all exports here
-export f, dfx, gausslegendre
-export Gibbs, Gibbs!, params, updf, pdf, logupdf, logpdf, gradlogpdf
-export HMC, NUTS, sample
-export GibbsQoI, GeneralQoI, Expectation, GradExpectation
 
 end
