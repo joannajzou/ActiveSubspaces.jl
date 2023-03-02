@@ -1,3 +1,13 @@
+"""
+
+ActiveSubspaces
+
+Author: Joanna Zou <jjzou@mit.edu>
+Version: 0.1.0
+Year: 2023
+Notes: A Julia library for implementing active subspaces for QoI-based dimension reduction in stochastic systems characterized by an invariant measure.
+
+"""
 module ActiveSubspaces
 
 # put all packages here
@@ -18,7 +28,7 @@ import FastGaussQuadrature: gausslegendre
 include("examplefile.jl")
 include("sampling.jl")
 include("gibbs.jl")
-# include("qoi.jl")
+include("qoi.jl")
 
 
 # computes Gauss Legendre quadrature points with change of domain
@@ -34,5 +44,6 @@ end
 export f, dfx, gausslegendre
 export Gibbs, Gibbs!, params, updf, pdf, logupdf, logpdf, gradlogpdf
 export HMC, NUTS, sample
+export GibbsQoI, GeneralQoI, Expectation, GradExpectation
 
 end
