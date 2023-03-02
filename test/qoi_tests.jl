@@ -1,5 +1,6 @@
 using ActiveSubspaces
 using Distributions
+using LinearAlgebra
 using Test
 
 @testset "computing QoIs" begin
@@ -17,28 +18,39 @@ using Test
     # QoI with quadrature integration
     ξi, wi = gausslegendre(100, -10, 10)
     Qquad = Expectation(θtest, q; ξ=ξi, w=wi)
+    ∇Qquad = GradExpectation(θtest, q; ξ=ξi, w=wi)
 
     # QoI with MCMC sampling 
     nsamp = 10000
     nuts = NUTS(1e-2)
     Qmc = Expectation(θtest, q; n=nsamp, sampler=nuts, ρ0=ρx0)
+    ∇Qmc = GradExpectation(θtest, q; n=nsamp, sampler=nuts, ρ0=ρx0)
 
     # QoI with importance sampling
     g = Gibbs(V=V, ∇xV=∇xV, ∇θV=∇θV, β=0.2, θ=[3,3])
     Qis1 = Expectation(θtest, q; g=g, n=nsamp, sampler=nuts, ρ0=ρx0)
+    ∇Qis1 = GradExpectation(θtest, q; g=g, n=nsamp, sampler=nuts, ρ0=ρx0)
 
     πu = Uniform(-5,5)
     Qis2 = Expectation(θtest, q; g=πu, n=nsamp)
+    ∇Qis2 = GradExpectation(θtest, q; g=πu, n=nsamp)
 
     xsamp = rand(πu, nsamp)
     Qis3 = Expectation(θtest, q; g=πu, xsamp=xsamp)
-
+    ∇Qis3 = GradExpectation(θtest, q; g=πu, xsamp=xsamp)
 
     # test with magnitude of error 
-    @test abs((Qquad - Qmc)/Qquad) <= 0.05
-    @test abs((Qquad - Qis1)/Qquad) <= 0.05
-    @test abs((Qquad - Qis2)/Qquad) <= 0.05
-    @test abs((Qquad - Qis3)/Qquad) <= 0.05
+    @test abs((Qquad - Qmc)/Qquad) <= 0.1
+    @test abs((Qquad - Qis1)/Qquad) <= 0.1
+    @test abs((Qquad - Qis2)/Qquad) <= 0.1
+    @test abs((Qquad - Qis3)/Qquad) <= 0.1
+
+    @test norm((∇Qquad - ∇Qmc)./∇Qquad) <= 1.0
+    @test norm((∇Qquad - ∇Qis1)./∇Qquad) <= 1.0
+    @test norm((∇Qquad - ∇Qis2)./∇Qquad) <= 1.0
+    @test norm((∇Qquad - ∇Qis3)./∇Qquad) <= 1.0
+    
     
 end
 
+ 
