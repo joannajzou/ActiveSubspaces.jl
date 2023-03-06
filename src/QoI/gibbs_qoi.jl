@@ -104,11 +104,11 @@ end
 function expectation_(qoi::GibbsQoI, g::Distribution, xsamp::Vector)            # importance sampling (samples provided)
     x = xsamp
     try # g has an unnormalized pdf
-        w(x) = updf(qoi.p, x) / updf(g, x)
-        return sum( qoi.h.(x) .* w.(x) ) / sum(w.(x))
+        wt(x) = updf(qoi.p, x) / updf(g, x)
+        return sum( qoi.h.(x) .* wt.(x) ) / sum(wt.(x))
     catch # g does not have an unnormalized pdf
-        w(x) = updf(qoi.p, x) / pdf(g, x)
-        return sum( qoi.h.(x) .* w.(x) ) / sum(w.(x))
+        wt(x) = updf(qoi.p, x) / pdf(g, x)
+        return sum( qoi.h.(x) .* wt.(x) ) / sum(wt.(x))
     end
 end
 
@@ -116,19 +116,19 @@ end
 function expectation_(qoi::GibbsQoI, g::Distribution, n::Int, sampler::Sampler, ρ0::Distribution) # importance sampling (MCMC sampling)
     x = rand(g, n, sampler, ρ0) 
     try # g has an unnormalized pdf
-        w(x) = updf(qoi.p, x) / updf(g, x)
-        return sum( qoi.h.(x) .* w.(x) ) / sum(w.(x))
+        wt(x) = updf(qoi.p, x) / updf(g, x)
+        return sum( qoi.h.(x) .* wt.(x) ) / sum(wt.(x))
     catch # g does not have an unnormalized pdf
-        w(x) = updf(qoi.p, x) / pdf(g, x)
-        return sum( qoi.h.(x) .* w.(x) ) / sum(w.(x))
+        wt(x) = updf(qoi.p, x) / pdf(g, x)
+        return sum( qoi.h.(x) .* wt.(x) ) / sum(wt.(x))
     end
 end
 
 
 function expectation_(qoi::GibbsQoI, g::Distribution, n::Int)                   # importance sampling (MC sampling)         
     x = rand(g, n)
-    w(x) = updf(qoi.p, x) / pdf(g, x)
-    return sum( qoi.h.(x) .* w.(x) ) / sum(w.(x))
+    wt(x) = updf(qoi.p, x) / pdf(g, x)
+    return sum( qoi.h.(x) .* wt.(x) ) / sum(wt.(x))
 end
 
 
@@ -144,12 +144,16 @@ See `expectation` for more information.
 - `kwargs`                              : keyword arguments for specifying method of integration
 
 """
-function grad_expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI; kwargs...)
+function grad_expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI; gradh::Union{Function, Nothing}=nothing, kwargs...)
     # compute gradient of h
-    ∇θh(x, γ) = ForwardDiff.gradient(γ -> qoi.h(x,γ), γ)
+    if gradh === nothing
+        ∇θh = (x, γ) -> ForwardDiff.gradient(γ -> qoi.h(x,γ), γ)
+    else
+        ∇θh = (x, γ) -> gradh(x, γ)
+    end
     
     # compute inner expectation E_p[∇θV]
-    E_qoi = GibbsQoI(h=qoi.p.∇θV, p=qoi.p)
+    E_qoi = GibbsQoI(h=(x,γ) -> qoi.p.∇θV(x,γ), p=qoi.p)
     E_∇θV = expectation(θ, E_qoi; kwargs...)
 
     # compute outer expectation
