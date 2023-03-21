@@ -153,7 +153,7 @@ function grad_expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI; gradh:
     end
     
     # compute inner expectation E_p[∇θV]
-    E_qoi = GibbsQoI(h=(x,γ) -> qoi.p.∇θV(x,γ), p=qoi.p)
+    E_qoi = GibbsQoI(h=qoi.p.∇θV, p=qoi.p)
     E_∇θV = expectation(θ, E_qoi; kwargs...)
 
     # compute outer expectation
