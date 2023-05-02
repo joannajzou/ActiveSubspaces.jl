@@ -18,28 +18,28 @@ using Test
     # QoI with quadrature integration
     ξi, wi = gausslegendre(100, -10, 10)
     Qquad = expectation(θtest, q; ξ=ξi, w=wi)
-    ∇Qquad = grad_expectation(θtest, q; ξ=ξi, w=wi)
+    ∇Qquad = grad_expectation(θtest, q; ξ=ξi, w=wi) # using ForwardDiff
+    ∇Qquad2 = grad_expectation(θtest, q; gradh=∇θV, ξ=ξi, w=wi) # using pre-defined gradient
+    @test ∇Qquad ≈ ∇Qquad2
 
     # QoI with MCMC sampling 
     nsamp = 10000
     nuts = NUTS(1e-2)
     Qmc = expectation(θtest, q; n=nsamp, sampler=nuts, ρ0=ρx0)
-    @time ∇Qmc = grad_expectation(θtest, q; n=nsamp, sampler=nuts, ρ0=ρx0)
-    @time ∇Qmc = grad_expectation(θtest, q; gradh=∇θV, n=nsamp, sampler=nuts, ρ0=ρx0)
+    @time ∇Qmc = grad_expectation(θtest, q; n=nsamp, sampler=nuts, ρ0=ρx0) # using ForwardDiff
 
     # QoI with importance sampling
     g = Gibbs(V=V, ∇xV=∇xV, ∇θV=∇θV, β=0.2, θ=[3,3])
-    Qis1 = expectation(θtest, q; g=g, n=nsamp, sampler=nuts, ρ0=ρx0)
-    ∇Qis1 = grad_expectation(θtest, q; g=g, n=nsamp, sampler=nuts, ρ0=ρx0)
+    Qis1, his1, wis1 = expectation(θtest, q; g=g, n=nsamp, sampler=nuts, ρ0=ρx0)
+    @time ∇Qis1, ∇his1, ∇wis1 = grad_expectation(θtest, q; gradh=∇θV, g=g, n=nsamp, sampler=nuts, ρ0=ρx0) 
 
     πu = Uniform(-5,5)
-    Qis2 = expectation(θtest, q; g=πu, n=nsamp)
-    ∇Qis2 = grad_expectation(θtest, q; g=πu, n=nsamp)
+    Qis2, his2, wis2 = expectation(θtest, q; g=πu, n=nsamp)
+    @time ∇Qis2, ∇his2, ∇wis2 = grad_expectation(θtest, q; gradh=∇θV, g=πu, n=nsamp)
 
     xsamp = rand(πu, nsamp)
-    Qis3 = expectation(θtest, q; g=πu, xsamp=xsamp)
-    @time ∇Qis3 = grad_expectation(θtest, q; g=πu, xsamp=xsamp)
-    @time ∇Qis3 = grad_expectation(θtest, q; gradh=∇θV, g=πu, xsamp=xsamp)
+    Qis3, his3, wis3 = expectation(θtest, q; g=πu, xsamp=xsamp)
+    @time ∇Qis3, ∇his3, ∇wis3 = grad_expectation(θtest, q; gradh=∇θV, g=πu, xsamp=xsamp)
 
     # test with magnitude of error 
     @test abs((Qquad - Qmc)/Qquad) <= 0.1

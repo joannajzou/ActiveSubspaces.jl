@@ -103,32 +103,31 @@ end
 
 function expectation_(qoi::GibbsQoI, g::Distribution, xsamp::Vector)            # importance sampling (samples provided)
     x = xsamp
-    try # g has an unnormalized pdf
-        wt(x) = updf(qoi.p, x) / updf(g, x)
-        return sum( qoi.h.(x) .* wt.(x) ) / sum(wt.(x))
+    wt(x) = try # g has an unnormalized pdf
+        updf(qoi.p, x) / updf(g, x)
     catch # g does not have an unnormalized pdf
-        wt(x) = updf(qoi.p, x) / pdf(g, x)
-        return sum( qoi.h.(x) .* wt.(x) ) / sum(wt.(x))
+        updf(qoi.p, x) / pdf(g, x)
     end
+    return sum( qoi.h.(x) .* wt.(x) ) / sum(wt.(x)), qoi.h.(x), wt.(x)
 end
 
 
 function expectation_(qoi::GibbsQoI, g::Distribution, n::Int, sampler::Sampler, ρ0::Distribution) # importance sampling (MCMC sampling)
     x = rand(g, n, sampler, ρ0) 
-    try # g has an unnormalized pdf
-        wt(x) = updf(qoi.p, x) / updf(g, x)
-        return sum( qoi.h.(x) .* wt.(x) ) / sum(wt.(x))
+    wt(x) = try # g has an unnormalized pdf
+        updf(qoi.p, x) / updf(g, x)
     catch # g does not have an unnormalized pdf
-        wt(x) = updf(qoi.p, x) / pdf(g, x)
-        return sum( qoi.h.(x) .* wt.(x) ) / sum(wt.(x))
+        updf(qoi.p, x) / pdf(g, x)
     end
+    return sum( qoi.h.(x) .* wt.(x) ) / sum(wt.(x)), qoi.h.(x), wt.(x)
 end
 
 
 function expectation_(qoi::GibbsQoI, g::Distribution, n::Int)                   # importance sampling (MC sampling)         
     x = rand(g, n)
     wt(x) = updf(qoi.p, x) / pdf(g, x)
-    return sum( qoi.h.(x) .* wt.(x) ) / sum(wt.(x))
+
+    return sum( qoi.h.(x) .* wt.(x) ) / sum(wt.(x)), qoi.h.(x), wt.(x)
 end
 
 
@@ -151,10 +150,13 @@ function grad_expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI; gradh:
     else
         ∇θh = (x, γ) -> gradh(x, γ)
     end
-    
+
+    A = Dict(kwargs) # arguments
+
     # compute inner expectation E_p[∇θV]
     E_qoi = GibbsQoI(h=qoi.p.∇θV, p=qoi.p)
     E_∇θV = expectation(θ, E_qoi; kwargs...)
+    if haskey(A, :g); E_∇θV = E_∇θV[1]; end
 
     # compute outer expectation
     hh(x, γ) = ∇θh(x, γ) + qoi.p.β * qoi.h(x, γ) * (qoi.p.∇θV(x, γ) - E_∇θV)
