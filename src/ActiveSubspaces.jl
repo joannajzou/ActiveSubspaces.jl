@@ -31,6 +31,8 @@ include("QoI/qoi.jl")
 
 include("Subspaces/subspaces.jl")
 
+include("Validation/validation.jl")
+
 
 # computes Gauss Legendre quadrature points with change of domain
 import FastGaussQuadrature: gausslegendre
