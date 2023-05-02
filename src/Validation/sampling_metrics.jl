@@ -1,5 +1,3 @@
-using StatsBase
-
 """
 function EffSampleSize(hsamp::Vector)
 
@@ -60,3 +58,20 @@ function ISWeightESS(wsamp::Vector)
     end
 end
     
+
+"""
+function ISWeightDiagnostic(wsamp::Vector)
+
+Returns a diagnostic value for importance sampling weights using an unnormalized biasing distribution. The importance sampling estimate is reliable when the diagnostic is less than 5. 
+# Arguments
+- `wsamp :: Vector`   : nMC-vector of 1-dim. weights
+
+# Outputs
+- `diagnostic :: Float64`    : diagnostic value (want < 5)
+"""
+function ISWeightDiagnostic(wsamp::Vector)
+    w̄ = mean(wsamp)
+    N = length(wsamp)
+
+    return 1/N * sum( (wsamp ./ w̄ .- 1).^2 )
+end
