@@ -114,15 +114,28 @@ end
 
 function expectation_(qoi::GibbsQoI, g::Distribution, xsamp::Vector)            # importance sampling (samples provided)
     x = xsamp
-    logwt(x) = try # g has an unnormalized pdf
-        logupdf(qoi.p, x) - logupdf(g, x)
-    catch # g does not have an unnormalized pdf
-        logupdf(qoi.p, x) - logpdf(g, x)
-    end
+    # logwt(x) = try # g has an unnormalized pdf
+    #     logupdf(qoi.p, x) - logupdf(g, x)
+    # catch # g does not have an unnormalized pdf
+    #     logupdf(qoi.p, x) - logpdf(g, x)
+    # end
+    logwt(x) = logupdf(qoi.p, x) - logpdf(g, x)
     M = maximum(logwt.(x))
     return sum( qoi.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoi.h.(x), exp.(logwt.(x))
 end
 
+
+function expectation_(qoi::GibbsQoI, g::Gibbs, xsamp::Vector)            # importance sampling (samples provided)
+    x = xsamp
+    # logwt(x) = try # g has an unnormalized pdf
+    #     logupdf(qoi.p, x) - logupdf(g, x)
+    # catch # g does not have an unnormalized pdf
+    #     logupdf(qoi.p, x) - logpdf(g, x)
+    # end
+    logwt(x) = logupdf(qoi.p, x) - logpdf(g, x)
+    M = maximum(logwt.(x))
+    return sum( qoi.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoi.h.(x), exp.(logwt.(x))
+end
 
 # function expectation_(qoi::GibbsQoI, g::Distribution, n::Int, sampler::Sampler, ρ0::Distribution) # importance sampling (MCMC sampling)
 #     x = rand(g, n, sampler, ρ0) 
@@ -137,14 +150,16 @@ end
 
 function expectation_(qoi::GibbsQoI, g::Distribution, n::Int, sampler::Sampler, ρ0::Distribution) # importance sampling (MCMC sampling)
     x = rand(g, n, sampler, ρ0) 
-    logwt(x) = try # g has an unnormalized pdf
-        logupdf(qoi.p, x) - logupdf(g, x)
-    catch # g does not have an unnormalized pdf
-        logupdf(qoi.p, x) - logpdf(g, x)
-    end
+    # logwt(x) = try # g has an unnormalized pdf
+    #     logupdf(qoi.p, x) - logupdf(g, x)
+    # catch # g does not have an unnormalized pdf
+    #     logupdf(qoi.p, x) - logpdf(g, x)
+    # end
+    logwt(x) = logupdf(qoi.p, x) - logpdf(g, x)
     M = maximum(logwt.(x))
     return sum( qoi.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoi.h.(x), exp.(logwt.(x))
 end
+
 
 
 # function expectation_(qoi::GibbsQoI, g::Distribution, n::Int)                   # importance sampling (MC sampling)         
