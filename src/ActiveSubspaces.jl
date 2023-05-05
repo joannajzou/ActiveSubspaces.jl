@@ -27,6 +27,8 @@ include("Sampling/sampling.jl")
 
 include("Distributions/distributions.jl")
 
+include("Integrators/integrators.jl")
+
 include("QoI/qoi.jl")
 
 include("Subspaces/subspaces.jl")
@@ -34,17 +36,6 @@ include("Subspaces/subspaces.jl")
 include("Validation/validation.jl")
 
 
-# computes Gauss Legendre quadrature points with change of domain
-import FastGaussQuadrature: gausslegendre
-
-function gausslegendre(npts, ll, ul)
-    ξ, w = gausslegendre(npts) 
-    ξz = (ul-ll) .* ξ / 2 .+ (ll+ul) / 2 # change of interval
-    wz = (ul-ll)/2 * w
-    return ξz, wz
-end
-
-export gausslegendre
 
 
 end
