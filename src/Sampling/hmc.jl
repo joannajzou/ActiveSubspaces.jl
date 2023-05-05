@@ -1,3 +1,13 @@
+"""
+struct HMC <: Sampler
+
+Defines the struct with parameters of the Hamiltonian Monte Carlo algorithm for sampling.
+
+# Arguments
+- `L :: Int`        : time length of integrating Hamiltonian's equations
+- `ϵ :: Float64`    : step size
+
+"""
 struct HMC <: Sampler
     L :: Int                        # length of integrating Hamiltonian's equations
     ϵ :: Float64                    # step size

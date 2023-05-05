@@ -1,3 +1,11 @@
+"""
+struct NUTS <: Sampler
+
+Defines the struct with parameters of the No-U-Turn-Sampler algorithm for sampling.
+
+# Arguments
+- `ϵ :: Union{<:Real, Nothing}`        : step size
+"""
 struct NUTS <: Sampler
     ϵ :: Union{<:Real, Nothing}     # step size
 
