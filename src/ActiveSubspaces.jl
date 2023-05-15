@@ -33,7 +33,7 @@ include("QoI/qoi.jl")
 
 include("Subspaces/subspaces.jl")
 
-include("Validation/validation.jl")
+include("Diagnostics/diagnostics.jl")
 
 
 
