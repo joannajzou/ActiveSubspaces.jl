@@ -17,169 +17,114 @@ end
 
 
 """
-function expectation(θ:: Union{Real,Vector{<:Real}}, qoi::QoI; kwargs...)
+function expectation(θ:: Union{Real,Vector{<:Real}}, qoi::QoI, integrator::Integrator)
 
 Evaluates the expectation E_p[h(θ)], where qoi.h(θ) is the random variable and qoi.p is the probability measure 
 
 # Arguments
 - `θ :: Union{Real, Vector{<:Real}}`    : parameters to evaluate expectation
 - `qoi :: QoI`                          : QoI object containing h and p, where θ==nothing
-- `kwargs`                              : keyword arguments for specifying method of integration
+- `integrator :: Integrator`            : struct specifying method of integration
 
-# Keyword arguments for Gauss quadrature integration
-- `ξ :: Vector{<:Real}`                 : quadrature points
-- `w :: Vector{<:Real}`                 : quadrature weights
+# Outputs 
+- `expec_estimator :: Real`             : estimate of scalar-valued expectation
 
-# Keyword arguments for integration by MC sampling
-This method may only be implemented when qoi.p can be analytically sampled using rand().
-- `n :: Int`                            : number of samples
-
-# Keyword arguments for integration by MCMC sampling
-This method is implemented when qoi.p cannot be analytically sampled.
-- `n :: Int`                            : number of samples
-- `sampler :: Sampler`                  : type of sampler (see `Sampler`)
-- `ρ0 :: Distribution`                  : prior distribution of the state
-
-# Keyword arguments for integration with samples provided 
-This method is implemented with the user providing samples from qoi.p. 
-- `xsamp :: Vector`                     : fixed set of samples
-
-# Keyword arguments for integration by importance sampling (sampling by standard MC)
-This method is implemented when the biasing distribution g can be analytically sampled using rand().
-- `g :: Distribution`                   : biasing distribution
-- `n :: Int`                            : number of samples
-
-# Keyword arguments for integration by importance sampling (sampling by MCMC)
-This method is implemented when the biasing distribution g cannot be analytically sampled.
-- `g :: Distribution`                   : biasing distribution
-- `n :: Int`                            : number of samples
-- `sampler :: Sampler`                  : type of sampler (see `Sampler`)
-- `ρ0 :: Distribution`                  : prior distribution of the state
-
-# Keyword arguments for integration by importance sampling (with samples provided)
-This method is implemented with the user providing samples from the biasing distribution. 
-- `g :: Distribution`                   : biasing distribution
-- `xsamp :: Vector`                     : fixed set of samples
-
+# Optional Outputs (from Importance Sampling)
+- `h(x) :: Vector`                      : integrand evaluations from importance sampling 
+- `wt(x) :: Vector`                     : weights from importance sampling 
 
 """ 
-function expectation(θ:: Union{Real, Vector{<:Real}}, qoi::GibbsQoI; kwargs...) # for GibbsQoI
+# quadrature integration
+function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integrator::GaussQuadrature)
     # fix parameters
     qoim = GibbsQoI(h = x -> qoi.h(x, θ), p=Gibbs(qoi.p, θ=θ))
 
-    A = Dict(kwargs) # arguments
-    
-    if haskey(A, :ξ) & haskey(A, :w)                                            # quadrature integration
-        return expectation_(qoim, A[:ξ], A[:w])
+    Z = normconst(qoim.p, integrator.ξ, integrator.w)
+    h̃(x) = qoim.h(x) * updf(qoim.p, x) / Z
+    return sum(integrator.w .* h̃.(integrator.ξ))
+end
 
-    elseif haskey(A, :g) & haskey(A, :xsamp)                                    # importance sampling (samples provided)
-        return expectation_(qoim, A[:g], A[:xsamp])
 
-    elseif haskey(A, :g) & haskey(A, :n) & haskey(A, :sampler) & haskey(A, :ρ0) # importance sampling (by MCMC)
-        return expectation_(qoim, A[:g], A[:n], A[:sampler], A[:ρ0])
+# integration with MCMC samples
+function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integrator::MCMC)
+    # fix parameters
+    qoim = GibbsQoI(h = x -> qoi.h(x, θ), p=Gibbs(qoi.p, θ=θ))
 
-    elseif haskey(A, :g) & haskey(A, :n)                                        # importance sampling (by MC)                                                        
-        return expectation_(qoim, A[:g], A[:n]) 
+    # x samples
+    x = rand(qoim.p, integrator.n, integrator.sampler, integrator.ρ0) 
 
-    elseif haskey(A, :n) & haskey(A, :sampler) & haskey(A, :ρ0)                 # MCMC sampling
-        return expectation_(qoim, A[:n], A[:sampler], A[:ρ0])
+    return sum(qoim.h.(x)) / length(x)
+end
 
-    elseif haskey(A, :xsamp)                                                    # samples provided
-        return expectation_(qoim, A[:xsamp])
 
-    else
-        println("ERROR: key word arguments missing or invalid")
+# integration with MC samples provided
+function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integrator::MCSamples)
+    # fix parameters
+    qoim = GibbsQoI(h = x -> qoi.h(x, θ), p=Gibbs(qoi.p, θ=θ))
 
+    # x samples
+    x = integrator.xsamp
+
+    return sum(qoim.h.(x)) / length(x)
+end
+
+
+# importance sampling (samples provided)
+function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integrator::ISSamples) 
+    # fix parameters
+    qoim = GibbsQoI(h = x -> qoi.h(x, θ), p=Gibbs(qoi.p, θ=θ))
+        
+    # x samples
+    x = integrator.xsamp
+
+    logwt(x) = if hasupdf(integrator.g) # g has an unnormalized pdf
+        logupdf(qoim.p, x) - logupdf(integrator.g, x)
+    else # g does not have an unnormalized pdf
+        logupdf(qoim.p, x) - logpdf(integrator.g, x)
     end
-end
 
-
-function expectation_(qoi::GibbsQoI, ξ::Vector{<:Real}, w::Vector{<:Real})      # quadrature integration
-    Z = normconst(qoi.p, ξ, w)
-    h̃(x) = qoi.h(x) * updf(qoi.p, x) / Z
-    return sum(w .* h̃.(ξ))
-end
-
-
-# function expectation_(qoi::GibbsQoI, g::Distribution, xsamp::Vector)            # importance sampling (samples provided)
-#     x = xsamp
-#     wt(x) = try # g has an unnormalized pdf
-#         updf(qoi.p, x) / updf(g, x)
-#     catch # g does not have an unnormalized pdf
-#         updf(qoi.p, x) / pdf(g, x)
-#     end
-#     return sum( qoi.h.(x) .* wt.(x) ) / sum(wt.(x)), qoi.h.(x), wt.(x)
-# end
-
-
-function expectation_(qoi::GibbsQoI, g::Distribution, xsamp::Vector)            # importance sampling (samples provided)
-    x = xsamp
-    # logwt(x) = try # g has an unnormalized pdf
-    #     logupdf(qoi.p, x) - logupdf(g, x)
-    # catch # g does not have an unnormalized pdf
-    #     logupdf(qoi.p, x) - logpdf(g, x)
-    # end
-    logwt(x) = logupdf(qoi.p, x) - logpdf(g, x)
     M = maximum(logwt.(x))
-    return sum( qoi.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoi.h.(x), exp.(logwt.(x))
+    return sum( qoim.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoim.h.(x), exp.(logwt.(x))
 end
 
 
-function expectation_(qoi::GibbsQoI, g::Gibbs, xsamp::Vector)            # importance sampling (samples provided)
-    x = xsamp
-    # logwt(x) = try # g has an unnormalized pdf
-    #     logupdf(qoi.p, x) - logupdf(g, x)
-    # catch # g does not have an unnormalized pdf
-    #     logupdf(qoi.p, x) - logpdf(g, x)
-    # end
-    logwt(x) = logupdf(qoi.p, x) - logpdf(g, x)
+
+# importance sampling (MCMC sampling)
+function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integrator::ISMCMC)
+    # fix parameters
+    qoim = GibbsQoI(h = x -> qoi.h(x, θ), p=Gibbs(qoi.p, θ=θ))
+
+    # x samples
+    x = rand(integrator.g, integrator.n, integrator.sampler, integrator.ρ0) 
+
+    logwt(x) =if hasupdf(integrator.g) # g has an unnormalized pdf
+        logupdf(qoim.p, x) - logupdf(integrator.g, x)
+    else # g does not have an unnormalized pdf
+        logupdf(qoim.p, x) - logpdf(integrator.g, x)
+    end
+
     M = maximum(logwt.(x))
-    return sum( qoi.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoi.h.(x), exp.(logwt.(x))
+    return sum( qoim.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoim.h.(x), exp.(logwt.(x))
 end
 
-# function expectation_(qoi::GibbsQoI, g::Distribution, n::Int, sampler::Sampler, ρ0::Distribution) # importance sampling (MCMC sampling)
-#     x = rand(g, n, sampler, ρ0) 
-#     wt(x) = try # g has an unnormalized pdf
-#         updf(qoi.p, x) / updf(g, x)
-#     catch # g does not have an unnormalized pdf
-#         updf(qoi.p, x) / pdf(g, x)
-#     end
-#     return sum( qoi.h.(x) .* wt.(x) ) / sum(wt.(x)), qoi.h.(x), wt.(x)
-# end
 
+# importance sampling (MC sampling)
+function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integrator::ISMC) 
+    # fix parameters
+    qoim = GibbsQoI(h = x -> qoi.h(x, θ), p=Gibbs(qoi.p, θ=θ))
 
-function expectation_(qoi::GibbsQoI, g::Distribution, n::Int, sampler::Sampler, ρ0::Distribution) # importance sampling (MCMC sampling)
-    x = rand(g, n, sampler, ρ0) 
-    # logwt(x) = try # g has an unnormalized pdf
-    #     logupdf(qoi.p, x) - logupdf(g, x)
-    # catch # g does not have an unnormalized pdf
-    #     logupdf(qoi.p, x) - logpdf(g, x)
-    # end
-    logwt(x) = logupdf(qoi.p, x) - logpdf(g, x)
+    # x samples
+    x = rand(integrator.g, integrator.n)
+
+    logwt(x) = logupdf(qoim.p, x)  - logpdf(integrator.g, x)
     M = maximum(logwt.(x))
-    return sum( qoi.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoi.h.(x), exp.(logwt.(x))
+    return sum( qoim.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoim.h.(x), exp.(logwt.(x))
 end
 
-
-
-# function expectation_(qoi::GibbsQoI, g::Distribution, n::Int)                   # importance sampling (MC sampling)         
-#     x = rand(g, n)
-#     wt(x) = updf(qoi.p, x) / pdf(g, x)
-
-#     return sum( qoi.h.(x) .* wt.(x) ) / sum(wt.(x)), qoi.h.(x), wt.(x)
-# end
-
-
-function expectation_(qoi::GibbsQoI, g::Distribution, n::Int)                   # importance sampling (MC sampling)         
-    x = rand(g, n)
-    logwt(x) = logupdf(qoi.p, x)  - logpdf(g, x)
-    M = maximum(logwt.(x))
-    return sum( qoi.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoi.h.(x), exp.(logwt.(x))
-end
 
 
 """
-function grad_expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI; kwargs...)
+function grad_expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integrator::Integrator; gradh::Union{Function, Nothing}=nothing)
 
 Computes the gradient of the QoI with respect to the parameters θ, e. g. ∇θ E_p[h(θ)].
 See `expectation` for more information.
@@ -187,10 +132,11 @@ See `expectation` for more information.
 # Arguments
 - `θ :: Union{Real, Vector{<:Real}}`    : parameters to evaluate expectation
 - `qoi :: QoI`                          : QoI object containing h and p
-- `kwargs`                              : keyword arguments for specifying method of integration
+- `integrator :: Integrator`            : struct specifying method of integration
+- `gradh :: Union{Function, Nothing}`   : gradient of qoi.h; if nothing, compute with ForwardDiff
 
 """
-function grad_expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI; gradh::Union{Function, Nothing}=nothing, kwargs...)
+function grad_expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integrator::Integrator; gradh::Union{Function, Nothing}=nothing)
     # compute gradient of h
     if gradh === nothing
         ∇θh = (x, γ) -> ForwardDiff.gradient(γ -> qoi.h(x,γ), γ)
@@ -198,16 +144,17 @@ function grad_expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI; gradh:
         ∇θh = (x, γ) -> gradh(x, γ)
     end
 
-    A = Dict(kwargs) # arguments
-
     # compute inner expectation E_p[∇θV]
     E_qoi = GibbsQoI(h=qoi.p.∇θV, p=qoi.p)
-    E_∇θV = expectation(θ, E_qoi; kwargs...)
-    if haskey(A, :g); E_∇θV = E_∇θV[1]; end
+    if typeof(integrator) <: ISIntegrator
+        E_∇θV, _, _ = expectation(θ, E_qoi, integrator)
+    else
+        E_∇θV = expectation(θ, E_qoi, integrator)
+    end
 
     # compute outer expectation
     hh(x, γ) = ∇θh(x, γ) + qoi.p.β * qoi.h(x, γ) * (qoi.p.∇θV(x, γ) - E_∇θV)
     hh_qoi = GibbsQoI(h=hh, p=qoi.p)
-    return expectation(θ, hh_qoi; kwargs...)
+    return expectation(θ, hh_qoi, integrator)
 
 end

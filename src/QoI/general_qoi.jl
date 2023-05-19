@@ -50,60 +50,113 @@ function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GeneralQoI; kwargs...
 end
 
 
-function expectation_(qoi::GeneralQoI, ξ::Vector{<:Real}, w::Vector{<:Real})    # quadrature integration
-    h̃(x) = qoi.h(x) * pdf(qoi.p, x)
-    return sum(w * h̃.(ξ))
+# quadrature integration
+function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GeneralQoI, integrator::QuadIntegrator)
+    # fix parameters
+    qoim = GeneralQoI(h = x -> qoi.h(x, θ), p=qoi.p)
+
+    Z = normconst(qoim.p, integrator.ξ, integrator.w)
+    h̃(x) = qoim.h(x) * updf(qoim.p, x) / Z
+    return sum(integrator.w .* h̃.(ξ))
 end
 
 
-function expectation_(qoi::GeneralQoI, n::Int)                                  # Monte Carlo integration                       
-    x = rand(qoi.p, n) 
-    return sum(qoi.h.(x)) / length(x)
+# integration with MCMC samples
+function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GeneralQoI, integrator::MCMC)
+    # fix parameters
+    qoim = GeneralQoI(h = x -> qoi.h(x, θ), p=qoi.p)
+
+    # x samples
+    x = rand(qoim.p, integrator.n, integrator.sampler, integrator.ρ0) 
+
+    return sum(qoim.h.(x)) / length(x)
 end
 
 
-function expectation_(qoi::GeneralQoI, g::Distribution, xsamp::Vector)          # importance sampling (samples provided)
-    x = xsamp
-    try # g has an unnormalized pdf
-        w(x) = pdf(qoi.p, x) / updf(g, x)
-        return sum( qoi.h.(x) .* w.(x) )
-    catch # g does not have an unnormalized pdf
-        w(x) = pdf(qoi.p, x) / pdf(g, x)
-        return sum( qoi.h.(x) .* w.(x) )
+# integration with MC samples provided
+function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GeneralQoI, integrator::MCSamples)
+    # fix parameters
+    qoim = GeneralQoI(h = x -> qoi.h(x, θ), p=qoi.p)
+
+    # x samples
+    x = integrator.xsamp
+
+    return sum(qoim.h.(x)) / length(x)
+end
+
+
+# importance sampling (samples provided)
+function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GeneralQoI, integrator::ISSamples) 
+    # fix parameters
+    qoim = GeneralQoI(h = x -> qoi.h(x, θ), p=qoi.p)
+        
+    # x samples
+    x = integrator.xsamp
+
+    logwt(x) = if hasupdf(integrator.g) # g has an unnormalized pdf
+        logpdf(qoim.p, x) - logupdf(integrator.g, x)
+    else # g does not have an unnormalized pdf
+        logpdf(qoim.p, x) - logpdf(integrator.g, x)
     end
+
+    M = maximum(logwt.(x))
+    return sum( qoim.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoim.h.(x), exp.(logwt.(x))
 end
 
 
-function expectation_(qoi::GeneralQoI, g::Distribution, n::Int, sampler::Sampler, ρ0::Distribution) # importance sampling (with MCMC samples)
-    x = rand(g, n, sampler, ρ0) 
-    try # g has an unnormalized pdf
-        w(x) = pdf(qoi.p, x) / updf(g, x)
-        return sum( qoi.h.(x) .* w.(x) ) / sum(w.(x))
-    catch # g does not have an unnormalized pdf
-        w(x) = pdf(qoi.p, x) / pdf(g, x)
-        return sum( qoi.h.(x) .* w.(x) ) / sum(w.(x))
+# importance sampling (MCMC sampling)
+function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GeneralQoI, integrator::ISMCMC)
+    # fix parameters
+    qoim = GeneralQoI(h = x -> qoi.h(x, θ), p=qoi.p)
+
+    # x samples
+    x = rand(integrator.g, integrator.n, integrator.sampler, integrator.ρ0) 
+
+    logwt(x) = if hasupdf(integrator.g) # g has an unnormalized pdf
+        logpdf(qoim.p, x) - logupdf(integrator.g, x)
+    else # g does not have an unnormalized pdf]
+        logpdf(qoim.p, x) - logpdf(integrator.g, x)
     end
+
+    M = maximum(logwt.(x))
+    return sum( qoim.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoim.h.(x), exp.(logwt.(x))
 end
 
 
-function expectation_(qoi::GeneralQoI, g::Distribution, n::Int)                 # importance sampling (with MC samples)          
-    x = rand(g, n)
-    w(x) = pdf(qoi.p, x) / pdf(g, x)
-    return sum( qoi.h.(x) .* w.(x) )
+# importance sampling (MC sampling)
+function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GeneralQoI, integrator::ISMC) 
+    # fix parameters
+    qoim = GeneralQoI(h = x -> qoi.h(x, θ), p=qoi.p)
+
+    # x samples
+    x = rand(integrator.g, integrator.n)
+
+    logwt(x) = logpdf(qoim.p, x)  - logpdf(integrator.g, x)
+    M = maximum(logwt.(x))
+    return sum( qoim.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoim.h.(x), exp.(logwt.(x))
 end
 
 
-function grad_expectation(θ::Union{Real, Vector{<:Real}}, qoi::GeneralQoI; kwargs...)
-   # compute gradient of h
-    ∇θh(x, γ) = ForwardDiff.gradient(γ -> qoi.h(x,γ), γ)
+# compute gradient of expectation
+function grad_expectation(θ::Union{Real, Vector{<:Real}}, qoi::GeneralQoI, integrator::Integrator; gradh::Union{Function, Nothing}=nothing)
+    # compute gradient of h
+    if gradh === nothing
+        ∇θh = (x, γ) -> ForwardDiff.gradient(γ -> qoi.h(x,γ), γ)
+    else
+        ∇θh = (x, γ) -> gradh(x, γ)
+    end
     
     # compute inner expectation E_p[∇θV]
     E_qoi = GeneralQoI(h=qoi.p.∇θV, p=qoi.p)
-    E_∇θV = expectation(θ, E_qoi; kwargs...)
+    if typeof(integrator) <: ISIntegrator
+        E_∇θV, _, _ = expectation(θ, E_qoi, integrator)
+    else
+        E_∇θV = expectation(θ, E_qoi, integrator)
+    end
 
     # compute outer expectation
     hh(x, γ) = ∇θh(x, γ) + qoi.p.β * qoi.h(x, γ) * (qoi.p.∇θV(x, γ) - E_∇θV)
     hh_qoi = GeneralQoI(h=hh, p=qoi.p)
-    return expectation(θ, hh_qoi; kwargs...)
+    return expectation(θ, hh_qoi, integrator)
 
 end

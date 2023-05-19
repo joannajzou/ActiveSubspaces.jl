@@ -33,7 +33,7 @@ Computes weighted subspace distance between r-dimensional subspaces of covarianc
 # Outputs
 - `d :: Float64`    : weighted subspace distance between A and B
 """
-function WeightedSubspaceDistance(A::Matrix, B::Matrix, rA::Int64, rB::Int64=rA)
+function WeightedSubspaceDistance(A::Matrix, B::Matrix, rA::Int64; rB::Int64=rA)
     
     # compute subspace of A
     γA, ψA = compute_subspace(A, rA)

@@ -17,29 +17,39 @@ using Test
 
     # QoI with quadrature integration
     ξi, wi = gausslegendre(100, -10, 10)
-    Qquad = expectation(θtest, q; ξ=ξi, w=wi)
-    ∇Qquad = grad_expectation(θtest, q; ξ=ξi, w=wi) # using ForwardDiff
-    ∇Qquad2 = grad_expectation(θtest, q; gradh=∇θV, ξ=ξi, w=wi) # using pre-defined gradient
+    GQint = GaussQuadrature(ξi, wi)
+    Qquad = expectation(θtest, q, GQint)
+    ∇Qquad = grad_expectation(θtest, q, GQint) # using ForwardDiff
+    ∇Qquad2 = grad_expectation(θtest, q, GQint; gradh=∇θV) # using pre-defined gradient
     @test ∇Qquad ≈ ∇Qquad2
 
     # QoI with MCMC sampling 
     nsamp = 10000
     nuts = NUTS(1e-2)
-    Qmc = expectation(θtest, q; n=nsamp, sampler=nuts, ρ0=ρx0)
-    @time ∇Qmc = grad_expectation(θtest, q; n=nsamp, sampler=nuts, ρ0=ρx0) # using ForwardDiff
+    MCint = MCMC(nsamp, nuts, ρx0)
+    Qmc = expectation(θtest, q, MCint)
+    @time ∇Qmc = grad_expectation(θtest, q, MCint) # using ForwardDiff
 
     # QoI with importance sampling
     g = Gibbs(V=V, ∇xV=∇xV, ∇θV=∇θV, β=0.2, θ=[3,3])
-    Qis1, his1, wis1 = expectation(θtest, q; g=g, n=nsamp, sampler=nuts, ρ0=ρx0)
-    @time ∇Qis1, ∇his1, ∇wis1 = grad_expectation(θtest, q; gradh=∇θV, g=g, n=nsamp, sampler=nuts, ρ0=ρx0) 
+    ISGint = ISMCMC(g, nsamp, nuts, ρx0)
+    Qis1, his1, wis1 = expectation(θtest, q, ISGint)
+    @time ∇Qis1, ∇his1, ∇wis1 = grad_expectation(θtest, q, ISGint; gradh=∇θV) 
+
+    xsamp = rand(g, nsamp, nuts, ρx0)
+    ISGint2 = ISSamples(g, xsamp)
+    Qis2, his2, wis2 = expectation(θtest, q, ISGint2)
+    @time ∇Qis2, ∇his2, ∇wis2 = grad_expectation(θtest, q, ISGint2; gradh=∇θV)
 
     πu = Uniform(-5,5)
-    Qis2, his2, wis2 = expectation(θtest, q; g=πu, n=nsamp)
-    @time ∇Qis2, ∇his2, ∇wis2 = grad_expectation(θtest, q; gradh=∇θV, g=πu, n=nsamp)
+    ISUint = ISMC(πu, nsamp)
+    Qis3, his3, wis3 = expectation(θtest, q, ISUint)
+    @time ∇Qis3, ∇his3, ∇wis3 = grad_expectation(θtest, q, ISUint)
 
     xsamp = rand(πu, nsamp)
-    Qis3, his3, wis3 = expectation(θtest, q; g=πu, xsamp=xsamp)
-    @time ∇Qis3, ∇his3, ∇wis3 = grad_expectation(θtest, q; gradh=∇θV, g=πu, xsamp=xsamp)
+    ISUint2 = ISSamples(πu, xsamp)
+    Qis4, his4, wis4 = expectation(θtest, q, ISUint2)
+    @time ∇Qis4, ∇his4, ∇wis4 = grad_expectation(θtest, q, ISUint2)
 
     # test with magnitude of error 
     @test abs((Qquad - Qmc)/Qquad) <= 0.1
