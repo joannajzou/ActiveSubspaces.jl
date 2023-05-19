@@ -11,15 +11,15 @@ using ProgressBars
 push!(Base.LOAD_PATH, dirname(@__DIR__))
 using PotentialLearning
 using ActiveSubspaces
-include("examples/potential/plot_utils.jl")
+include("examples/potential/plot_utils.jl");
 
 
-# path = "examples/potential/sodium_emp/experiment/"
-# run(`mkdir -p $path`)
+path = "examples/potential/sodium_emp/experiment/"
+run(`mkdir -p $path`)
 
 ## load data on configurations
 ds, thermo = load_data("examples/potential/sodium_emp/liquify_sodium.yaml", YAML(:Na, u"eV", u"Å"))
-ds, thermo = ds[220:end], thermo[220:end];
+ds, thermo = ds[1:10], thermo[1:10];
 # systems = get_system.(ds)
 
 
@@ -38,8 +38,8 @@ lb = LBasisPotential(ace)
 
 ## compute ACE descriptors
 e_descr = compute_local_descriptors(ds, ace)
-# f_descr = compute_force_descriptors(ds, ace)
-# JLD.save(path * "sodium_energy_descr.jld", "e_descr", e_descr)
+f_descr = compute_force_descriptors(ds, ace)
+JLD.save(path * "sodium_energy_descr.jld", "e_descr", e_descr)
 # e_descr = JLD.load(path * "sodium_energy_descr.jld")["e_descr"]
 ds = DataSet(ds .+ e_descr) # .+ f_descr
 
@@ -98,9 +98,9 @@ q = GibbsQoI(h=V, p=πgibbs) # (x,γ) -> V(x,γ)
 
 
 # define sampling density
-nsamp = 1000 # 50000
+nsamp = 5000 # 50000
 μθ = lb.β
-Σθ = 0.1*Diagonal(abs.(lb.β))
+Σθ = Hermitian(Σ) + 1e-10*I(length(lb.β)) # 0.1*Diagonal(abs.(lb.β))
 ρθ = MvNormal(μθ, Σθ) # prior on θ 
 θsamp = [rand(ρθ) for i = 1:nsamp]
 
@@ -110,14 +110,43 @@ nsamp = 1000 # 50000
 Φsamp = sum.(get_values.(get_local_descriptors.(ds)))
 @time ∇Qistest = grad_expectation(θsamp[1], q; gradh=∇θV, g=πg, xsamp=Φsamp)
 @time ∇Qis_g = map(θ -> grad_expectation(θ, q; gradh=∇θV, g=πg, xsamp=Φsamp), θsamp)
-JLD.save("examples/potential/sodium_emp/gradQ_lj_M=1000.jld", "θsamp", θsamp, "∇Q", ∇Qis_g)
+JLD.save("examples/potential/sodium_emp/gradQ_lj_M=5000.jld", "θsamp", θsamp, "∇Q", ∇Qis_g)
 
 
 # active subspace 
-d = 10
-λas, Was = ActiveSubspaces.select_eigendirections(∇Qis_g, d)
-nzi = findall(x -> x > 0, λas)
+d = 6
+C = compute_covmatrix(∇Qis_g)
+λ, ϕ = eigen(C)
+λ, ϕ = λ[end:-1:1], ϕ[:, end:-1:1] # reorder
+Wy = ϕ[:, 1:d]; Wz = ϕ[:, d+1:end]
+nzi = findall(x -> x > 0, λ)
 
+
+
+## sample from active subspace ##################################################################
+
+
+ρy = MvNormal(Wy'*ρθ.μ, Hermitian(Wy'*ρθ.Σ*Wy))
+ρz = MvNormal(Wz'*ρθ.μ, Hermitian(Wz'*ρθ.Σ*Wz))
+
+M = 5000
+θsubsamp = [rand(ρθ) for i = 1:M]
+ysamp = [rand(ρy) for i = 1:M]
+zsamp = [rand(ρz) for i = 1:M]
+θy = (Wy,) .* ysamp
+θz = (Wz,) .* zsamp
+@time Qθ = map(θ -> expectation(θ, q; gradh=∇θV, g=πg, xsamp=Φsamp), θsubsamp)
+@time Qy = map(θ -> expectation(θ, q; gradh=∇θV, g=πg, xsamp=Φsamp), θy)
+@time Qz = map(θ -> expectation(θ, q; gradh=∇θV, g=πg, xsamp=Φsamp), θz)
+
+fig = Figure(resolution=(600,600))
+ax = Axis(fig[1,1], xlabel="Q(θ)", ylabel="ct.") # xscale=log10)
+ylims!(ax, 0, 800)
+hist!(ax, Qθ, bins=20, label="samples from posterior π(θ)")
+hist!(ax, Qy, bins=20, label="samples from active subspace")
+# hist!(ax, Qz, label="samples from inactive subspace")
+axislegend(ax)
+fig
 
 # reduced dimensional descriptors
 Ψ_train = (Was',) .* e_descr_train # energy descriptors
@@ -161,7 +190,8 @@ metrics_pca = get_metrics( ê_train_pred, e_train,
 # PLOT ########################################################################################
 
 # plot eigenspectrum
-plot_eigenspectrum([λpca[nzi], λas[nzi]]; predlab=["PCA", "Active Subspace"])
+plot_eigenspectrum(λas[nzi])
+# plot_eigenspectrum([λpca[nzi], λas[nzi]]; predlab=["PCA", "Active Subspace"])
 # plot errors
 plot_energy([e_train_pred, ê_train_pred, ẽ_train_pred], e_train; predlab=["full model", "reduced model (PCA)", "reduced model (AS)"])
 plot_energy([e_test_pred, ê_test_pred, ẽ_test_pred], e_test; predlab=["full model", "reduced model (PCA)", "reduced model (AS)"])
@@ -176,6 +206,11 @@ plot_cosine_sim([Wpca, Was])
 
 
 # FUNCTIONS ########################################################################################
+
+function compute_with_subspace(Q::Function, W::Matrix, ysamp::Vector)
+    θ = W*ysamp
+    return Q(θ)
+end
 
 function get_all_energies(ds::DataSet)
     return [get_values(get_energy(ds[c])) for c in 1:length(ds)]
