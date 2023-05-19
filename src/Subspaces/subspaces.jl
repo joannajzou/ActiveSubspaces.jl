@@ -15,7 +15,7 @@ function select_eigendirections(dθ::Vector{T}, tol::Float64) where T <: Vector{
     λ, ϕ = λ[end:-1:1], ϕ[:, end:-1:1] # reorder
     Σ = 1.0 .- cumsum(λ) / sum(λ)
     W = ϕ[:, Σ .> tol]
-    return λ, W
+    return C, λ, W
 end
 
 
@@ -24,7 +24,7 @@ function select_eigendirections(dθ::Vector{T}, tol::Int) where T <: Vector{<:Re
     λ, ϕ = eigen(C)
     λ, ϕ = λ[end:-1:1], ϕ[:, end:-1:1] # reorder
     W = ϕ[:, 1:tol]
-    return λ, W
+    return C, λ, W
 end
 
 
@@ -32,7 +32,7 @@ function select_eigendirections(C::Matrix{T}, tol::Int) where T <: Real
     λ, ϕ = eigen(C)
     λ, ϕ = λ[end:-1:1], ϕ[:, end:-1:1] # reorder
     W = ϕ[:, 1:tol]
-    return λ, W
+    return C, λ, W
 end
 
 
