@@ -1,6 +1,8 @@
 # define QoI as mean energy V
 function h(x, θ, integrator::Integrator)
-    V(x, θ)
+    # compute expected value
+    EV = expectation()
+
 ∇h(x, θ) = ∇θV(x, θ)
 
 

@@ -54,22 +54,22 @@ MCint = MCMC(nMC, nuts, ρx0)
 nβ = length(βarr)
 
 # θ samples for MC integration 
-nsamp_arr = [12000] # 1500 
+nsamp_arr = [1000, 2000, 4000, 8000] # 1500 
 nrepl = 1                   # number of replications of sampling
 
 
 
 # compute reference covariance matrix ######################################################################
 
-Cref = zeros(2,2)
-for i = 1:ngrid
-    for j = 1:ngrid
-        println("($i, $j)")
-        ξij = [ξθ[i], ξθ[j]]
-        ∇Qij = grad_expectation(ξij, q, GQint)
-        Cref .+= ∇Qij*∇Qij' * pdf(ρθ, ξij) * wθ[i] * wθ[j]
-    end
-end
+# Cref = zeros(2,2)
+# for i = 1:ngrid
+#     for j = 1:ngrid
+#         println("($i, $j)")
+#         ξij = [ξθ[i], ξθ[j]]
+#         ∇Qij = grad_expectation(ξij, q, GQint)
+#         Cref .+= ∇Qij*∇Qij' * pdf(ρθ, ξij) * wθ[i] * wθ[j]
+#     end
+# end
 
 
 
@@ -159,7 +159,7 @@ for n = 1:length(nsamp_arr)
 
 end
 
-JLD.save("data/DW1D_Ref.jld",
-        "ngrid", ngrid,
-        "Cref", Cref,
-    )
+# JLD.save("data/DW1D_Ref.jld",
+#         "ngrid", ngrid,
+#         "Cref", Cref,
+#     )
