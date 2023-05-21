@@ -47,12 +47,14 @@ end
 
 
 function plot_eigenspectrum(λ::Vector{Float64})
-    fig = Figure(resolution=(600,600))
+    fig = Figure(resolution=(500,500))
     ax = Axis(fig[1,1],
             title="Spectrum of gradient covariance matrix C",
             xlabel="index i",
             ylabel="eigenvalue (λ_i)",
-            yscale=log10)
+            yscale=log10,
+            xgridvisible=false,
+            ygridvisible=false)
     scatterlines!(ax, 1:length(λ), λ)
     return fig
 end
