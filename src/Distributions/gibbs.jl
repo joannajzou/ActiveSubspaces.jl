@@ -62,21 +62,15 @@ function normconst(d::Gibbs, ξ::Vector, w::Vector)
     return sum(w' * updf.(d, ξ))
 end
 
-# 4 - pdf
-pdf(d::Gibbs, x) = exp(d.β * d.V(x)) ./ normconst(d)
-
-# 5 - log unnormalized pdf
+# 4 - log unnormalized pdf
 logupdf(d::Gibbs, x) = d.β * d.V(x)
 
-# 6 - logpdf
-logpdf(d::Gibbs, x) = d.β * d.V(x) - log(normconst(d))
-
-# 7 - gradlogpdf (wrt x)
+# 5 - gradlogpdf (wrt x)
 gradlogpdf(d::Gibbs, x::Real) = d.β * d.∇xV(x)
 gradlogpdf(d::Gibbs, x::Vector) = d.β * d.∇xV(x)
 
-# 8 - minimum
+# 6 - minimum
 minimum(d::Gibbs) = -Inf
 
-# 9 - maximum
+# 7 - maximum
 maximum(d::Gibbs) = Inf

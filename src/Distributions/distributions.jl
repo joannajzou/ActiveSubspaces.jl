@@ -22,4 +22,4 @@ function hasupdf(d::Distribution)
 end
 
 
-export Gibbs, Gibbs!, params, updf, pdf, logupdf, logpdf, gradlogpdf, hasupdf
+export Gibbs, Gibbs!, params, updf, logupdf, normconst, gradlogpdf, hasupdf
