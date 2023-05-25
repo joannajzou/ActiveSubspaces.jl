@@ -1,13 +1,15 @@
 include("subspace_metrics.jl")
 include("sampling_metrics.jl")
 
-function init_metrics_dict(nrepl)
-    metrics = Dict{String, Vector{Vector}}()
-    metrics["θsamp"] = Vector{Vector{Float64}}(undef, nrepl)
-    metrics["wvar"] = Vector{Vector{Float64}}(undef, nrepl)
-    metrics["wESS"] = Vector{Vector{Float64}}(undef, nrepl)
-    metrics["wdiag"] = Vector{Vector{Float64}}(undef, nrepl)
+
+function init_metrics_dict(n::Int64)
+    metrics = Dict{String, Vector}()
+    metrics["θsamp"] = Vector{Vector{Float64}}(undef, n)
+    metrics["wvar"] = Vector{Float64}(undef, n)
+    metrics["wESS"] = Vector{Float64}(undef, n)
+    metrics["wdiag"] = Vector{Float64}(undef, n)
     return metrics
 end
+
 
 export ForstnerDistance, WeightedSubspaceDistance, EffSampleSize, ISWeightVariance, ISWeightESS, ISWeightDiagnostic, init_metrics_dict
