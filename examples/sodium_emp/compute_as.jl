@@ -14,7 +14,7 @@ using ActiveSubspaces
 include("examples/potential/plot_utils.jl");
 
 
-path = "examples/potential/sodium_emp/experiment/"
+path = "examples/potential/sodium_emp/data/"
 run(`mkdir -p $path`)
 
 ## load data on configurations
