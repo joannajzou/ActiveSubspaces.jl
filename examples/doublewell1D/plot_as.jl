@@ -5,7 +5,8 @@ using JLD
 using CairoMakie
 
 include("model_param1.jl")
-include("qoi_meanenergy/qoi_meanenergy.jl")
+include("qoi_meanenergy.jl")
+include("plotting_utils.jl")
 
 function init_eig_arrays(d, nsamp_arr)
     λarr = Matrix{Float64}(undef, (d, length(nsamp_arr)))
@@ -18,16 +19,17 @@ function compute_val(nsamp_arr::Vector{Int64}, λref::Vector{Float64}, Cref::Mat
     val["λ1_err"] = [(λmc[1,i] - λref[1]) / λref[1] for i = 1:length(nsamp_arr)]
     val["λ2_err"] = [(λmc[2,i] - λref[2]) / λref[2] for i = 1:length(nsamp_arr)]
     val["SS_err"] = [ForstnerDistance(Cref, Cmc[nsamp]) for nsamp in nsamp_arr]
+    val["WSD"] = [WeightedSubspaceDistance(Cref, Cmc[nsamp], 1) for nsamp in nsamp_arr]
     return val
 end
 
 
 
 # load data ##############################################################################
-Cref = JLD.load("data/DW1D_Ref.jld")["Cref"]
+Cref = JLD.load("data1/DW1D_Ref.jld")["Cref"]
 
-nsamp_arr = [1500, 3000, 6000, 12000]
-nrepl_arr = [10, 1, 1, 1]
+nsamp_arr = [1000, 1500, 2000, 3000, 4000, 6000, 8000, 12000]
+nrepl_arr = [1, 10, 1, 1, 1, 1, 1, 1]
 
 Cmc = Dict{Int64, Matrix{Float64}}()
 Cis_u = Dict{Int64, Matrix{Float64}}()
@@ -39,18 +41,23 @@ for i = 1:length(nsamp_arr)
     nsamp = nsamp_arr[i]
     nrepl = nrepl_arr[i]
 
-    Cmc[nsamp] = JLD.load("qoi_meanenergy/data/DW1D_MC_nsamp={$nsamp}_nrepl={$nrepl}.jld")["C"][1]
-    Cis_u[nsamp]= JLD.load("qoi_meanenergy/data/DW1D_ISU_nsamp={$nsamp}_nrepl={$nrepl}.jld")["C"][1]
-    Cis_g1[nsamp]= JLD.load("qoi_meanenergy/data/DW1D_ISG_nsamp={$nsamp}_nrepl={$nrepl}.jld")["C"][0.01][1]
-    Cis_g2[nsamp]= JLD.load("qoi_meanenergy/data/DW1D_ISG_nsamp={$nsamp}_nrepl={$nrepl}.jld")["C"][0.2][1]
-    Cis_g3[nsamp]= JLD.load("qoi_meanenergy/data/DW1D_ISG_nsamp={$nsamp}_nrepl={$nrepl}.jld")["C"][1.0][1]
+    Cmc[nsamp] = mean(JLD.load("data1/DW1D_MC_nsamp={$nsamp}_nrepl={$nrepl}.jld")["C"])
+    Cis_u[nsamp]= mean(JLD.load("data1/DW1D_ISU_nsamp={$nsamp}_nrepl={$nrepl}.jld")["C"])
+    Cis_g1[nsamp]= mean(JLD.load("data1/DW1D_ISG_nsamp={$nsamp}_nrepl={$nrepl}.jld")["C"][0.01])
+    Cis_g2[nsamp]= mean(JLD.load("data1/DW1D_ISG_nsamp={$nsamp}_nrepl={$nrepl}.jld")["C"][0.2])
+    Cis_g3[nsamp]= mean(JLD.load("data1/DW1D_ISG_nsamp={$nsamp}_nrepl={$nrepl}.jld")["C"][1.0])
 end
 
-πu = JLD.load("qoi_meanenergy/data/DW1D_ISU_nsamp={$nsamp}_nrepl={$nrepl}.jld")["π_bias"]
+nsamp = 8000; nrepl = 1
+πu = JLD.load("data1/DW1D_ISU_nsamp={$nsamp}_nrepl={$nrepl}.jld")["π_bias"]
 ll = πu.a; ul = πu.b
-βarr = JLD.load("qoi_meanenergy/data/DW1D_ISG_nsamp={$nsamp}_nrepl={$nrepl}.jld")["βarr"]
+βarr = JLD.load("data1/DW1D_ISG_nsamp={$nsamp}_nrepl={$nrepl}.jld")["βarr"]
 d = 2
 ξx, wx = gausslegendre(200, -10, 10)
+
+πg1 = Gibbs(πgibbs0, β=0.01, θ=[3,3])
+πg2 = Gibbs(πgibbs0, β=0.2, θ=[3,3])
+πg3 = Gibbs(πgibbs0, β=1.0, θ=[3,3])
 
 
 
@@ -105,25 +112,32 @@ f3 = plot_val_metric("SS_err", nsamp_arr,
                 (val_mc, val_u, val_g1, val_g2, val_g3),
                 ("MC","IS, U[-5, 5]", "IS, Gibbs (β=0.01)", "IS, Gibbs (β=0.2)", "IS, Gibbs (β=1.0)"),
                 "d(C, Ĉ)", 
-                "Forstner distance from reference covariance matrix"
+                "Forstner distance from reference covariance matrix",
+                logscl=false
 )
-
+f4 = plot_val_metric("WSD", nsamp_arr,
+                (val_mc, val_u, val_g1, val_g2, val_g3),
+                ("MC","IS, U[-5, 5]", "IS, Gibbs (β=0.01)", "IS, Gibbs (β=0.2)", "IS, Gibbs (β=1.0)"),
+                "d(C, Ĉ)", 
+                "Weighted subspace distance (first eigenvector)",
+                logscl=false
+)
 
 
 # plot importance sampling diagnostics ###############################################
 nsamp = 12000; nrepl = 1
-metrics_u = JLD.load("qoi_meanenergy/data/DW1D_ISU_nsamp={$nsamp}_nrepl={$nrepl}.jld")["metrics"]
-metrics_g = JLD.load("qoi_meanenergy/data/DW1D_ISG_nsamp={$nsamp}_nrepl={$nrepl}.jld")["metrics"]
+metrics_u = JLD.load("data1/DW1D_ISU_nsamp={$nsamp}_nrepl={$nrepl}.jld")["metrics"]
+metrics_g = JLD.load("data1/DW1D_ISG_nsamp={$nsamp}_nrepl={$nrepl}.jld")["metrics"]
 
-f4 = plot_IS_diagnostic("wvar", 
+f5 = plot_IS_diagnostic("wvar", 
                 (metrics_u, metrics_g[0.01], metrics_g[0.2], metrics_g[1.0]),
-                ("MC","IS, U[-5, 5]", "IS, Gibbs (β=0.01)", "IS, Gibbs (β=0.2)", "IS, Gibbs (β=1.0)"),
+                ("IS, U[-5, 5]", "IS, Gibbs (β=0.01)", "IS, Gibbs (β=0.2)", "IS, Gibbs (β=1.0)"),
                 "log(Var(w))",
                 "Log variance of IS weights",
                 logscl=true
 )
 
-f5 = plot_IS_diagnostic("wESS", 
+f6 = plot_IS_diagnostic("wESS", 
                 (metrics_u, metrics_g[0.01], metrics_g[0.2], metrics_g[1.0]),
                 ("U[-5, 5]", "Gibbs (β=0.01)", "Gibbs (β=0.2)", "Gibbs (β=1.0)"),
                 "ESS(w)",
@@ -131,15 +145,15 @@ f5 = plot_IS_diagnostic("wESS",
                 logscl=false
 )
 
-f5 = plot_IS_diagnostic("wdiag", 
+f7 = plot_IS_diagnostic("wdiag", 
                 (metrics_u, metrics_g[0.01], metrics_g[0.2], metrics_g[1.0]),
                 ("U[-5, 5]", "Gibbs (β=0.01)", "Gibbs (β=0.2)", "Gibbs (β=1.0)"),
                 "IS diag.",
-                "IS diagnostics",
-                logscl=false
+                "IS diagnostic",
+                logscl=true
 )
 
-f6 = plot_IS_diagnostic("w̃ESS", 
+f8 = plot_IS_diagnostic("w̃ESS", 
                 (metrics_u, metrics_g[0.01], metrics_g[0.2], metrics_g[1.0]),
                 ("U[-5, 5]", "Gibbs (β=0.01)", "Gibbs (β=0.2)", "Gibbs (β=1.0)"),
                 "Mod. ESS(w)",
@@ -149,55 +163,128 @@ f6 = plot_IS_diagnostic("w̃ESS",
 
     
 
+# compute CDF plots #############################################################################
+
+# compare MC sample size
+f9 = plot_IS_cdf("wvar",
+                "ISU",
+                nsamp_arr, nrepl_arr
+)
+
+f10 = plot_IS_cdf("wvar",
+                "ISG",
+                nsamp_arr, nrepl_arr,
+                β=0.01
+)
+
+f11 = plot_IS_cdf("wvar",
+                "ISG",
+                nsamp_arr, nrepl_arr,
+                β=0.2
+)
+
+f11 = plot_IS_cdf("wvar",
+                "ISG",
+                nsamp_arr, nrepl_arr,
+                β=1.0
+)
+
+# compare IS biasing distribution
+f12 = plot_IS_cdf("wvar",
+                (metrics_u, metrics_g[0.01], metrics_g[0.2], metrics_g[1.0]),
+                ("U[-5, 5]", "Gibbs (β=0.01)", "Gibbs (β=0.2)", "Gibbs (β=1.0)"),
+                "Variance of IS weights",
+                limittype = "med"
+)
+
+f13 = plot_IS_cdf("wESS",
+                (metrics_u, metrics_g[0.01], metrics_g[0.2], metrics_g[1.0]),
+                ("U[-5, 5]", "Gibbs (β=0.01)", "Gibbs (β=0.2)", "Gibbs (β=1.0)"),
+                "ESS of IS weights",
+                limittype = "max"
+)
+
+f14 = plot_IS_cdf("w̃ESS",
+                (metrics_u, metrics_g[0.01], metrics_g[0.2], metrics_g[1.0]),
+                ("U[-5, 5]", "Gibbs (β=0.01)", "Gibbs (β=0.2)", "Gibbs (β=1.0)"),
+                "Mod. ESS of IS weights",
+                limittype = "max"
+)
+
+f15 = plot_IS_cdf("wdiag",
+                (metrics_u, metrics_g[0.01], metrics_g[0.2], metrics_g[1.0]),
+                ("U[-5, 5]", "Gibbs (β=0.01)", "Gibbs (β=0.2)", "Gibbs (β=1.0)"),
+                "IS Diagnostic",
+                limittype = "max"
+)
+
+
+
 # plot extraordinary samples ####################################################################
 
-πg1 = Gibbs(πgibbs0, β=0.01, θ=[3,3])
-πg2 = Gibbs(πgibbs0, β=0.2, θ=[3,3])
-πg3 = Gibbs(πgibbs0, β=1.0, θ=[3,3])
 
-f7 = plot_IS_samples(πgibbs0,
-                "w̃ESS", 
-                (metrics_u, metrics_g[0.01], metrics_g[0.2], metrics_g[1.0]),
-                ("U[-5, 5]", "Gibbs (β=0.01)", "Gibbs (β=0.2)", "Gibbs (β=1.0)"),
-                (πu, πg1, πg2, πg3),
-                "Samples with high mod. ESS",
-                [ll, ul],
-                (ξx, wx);
-                rev=true
-)
-th = Int(round(exp(-7)))
-f7 = plot_IS_samples(πgibbs0,
-                "w̃ESS", 
-                (metrics_u, metrics_g[0.01], metrics_g[0.2], metrics_g[1.0]),
-                ("U[-5, 5]", "Gibbs (β=0.01)", "Gibbs (β=0.2)", "Gibbs (β=1.0)"),
-                (πu, πg1, πg2, πg3),
-                "Samples with low mod. ESS",
-                [ll, ul],
-                (ξx, wx),
-                thresh=th
-)
+figs = Vector{Figure}(undef, length(nsamp_arr))
+for i = 1:length(nsamp_arr)
+    nsamp = nsamp_arr[i]
+    nrepl = nrepl_arr[i]
 
+    metrics_u = JLD.load("data1/DW1D_ISU_nsamp={$nsamp}_nrepl={$nrepl}.jld")["metrics"]
+    metrics_g = JLD.load("data1/DW1D_ISG_nsamp={$nsamp}_nrepl={$nrepl}.jld")["metrics"]
 
+    # th = 1e1
+    # figs[i] = plot_IS_samples(πgibbs0,
+    #                 "wvar", 
+    #                 (metrics_u, metrics_g[0.01], metrics_g[0.2], metrics_g[1.0]),
+    #                 ("U[-5, 5]", "Gibbs (β=0.01)", "Gibbs (β=0.2)", "Gibbs (β=1.0)"),
+    #                 (πu, πg1, πg2, πg3),
+    #                 "Samples with high variance of IS weights",
+    #                 [ll, ul],
+    #                 (ξx, wx),
+    #                 thresh=th,
+    #                 rev=true
+    # )
 
-# plot realizations of Gibbs distribution 
-# fig1b = Gibbdist_plot(β_arr, logwvar_arr, "Gibbs dist. of θ samples corresp. to low variance of IS wts.", rev=false, nsamp=100)
-# fig2b = Gibbdist_plot(β_arr, wess_arr, "Gibbs dist. of θ samples corresp. to high ESS/n", rev=true, nsamp=100)
-# fig3b = Gibbdist_plot(β_arr, hess_arr, "Gibbs dist. of θ samples corresp. to high mod. ESS/n", rev=true, nsamp=100)
+    # th = 10^(-0.5)
+    # figs[i] = plot_IS_samples(πgibbs0,
+    #                 "wESS", 
+    #                 (metrics_u, metrics_g[0.01], metrics_g[0.2], metrics_g[1.0]),
+    #                 ("U[-5, 5]", "Gibbs (β=0.01)", "Gibbs (β=0.2)", "Gibbs (β=1.0)"),
+    #                 (πu, πg1, πg2, πg3),
+    #                 "Samples with low ESS",
+    #                 [ll, ul],
+    #                 (ξx, wx),
+    #                 thresh=th,
+    #                 rev=false
+    # )
 
-th = exp(-17)
-fig1b = Gibbdist_plot(β_arr, wvar_arr, "Gibbs dist. of θ samples corresp. to low variance of IS wts. (<= $th)", rev=false, thresh=th)
-th = Int(0.4*nMC)
-fig2b = Gibbdist_plot(β_arr, wess_arr, "Gibbs dist. of θ samples corresp. to low ESS (> $th)", rev=true, thresh=th)
-th = Int(round(exp(-7)*nMC))
-fig3b = Gibbdist_plot(β_arr, hess_arr, "Gibbs dist. of θ samples corresp. to low mod. ESS (> $th)", rev=true, thresh=th)
+    # th = 10^(-1)
+    # figs[i] = plot_IS_samples(πgibbs0,
+    #                 "w̃ESS", 
+    #                 (metrics_u, metrics_g[0.01], metrics_g[0.2], metrics_g[1.0]),
+    #                 ("U[-5, 5]", "Gibbs (β=0.01)", "Gibbs (β=0.2)", "Gibbs (β=1.0)"),
+    #                 (πu, πg1, πg2, πg3),
+    #                 "Samples with low mod. ESS",
+    #                 [ll, ul],
+    #                 (ξx, wx),
+    #                 thresh=th,
+    #                 rev=false
+    # )
 
+    th = 4.0
+    figs[i] = plot_IS_samples(πgibbs0,
+                    "wdiag", 
+                    (metrics_u, metrics_g[0.01], metrics_g[0.2], metrics_g[1.0]),
+                    ("U[-5, 5]", "Gibbs (β=0.01)", "Gibbs (β=0.2)", "Gibbs (β=1.0)"),
+                    (πu, πg1, πg2, πg3),
+                    "Samples with high IS diagnostic measure",
+                    [ll, ul],
+                    (ξx, wx),
+                    thresh=th,
+                    rev=true
+    )
 
-th = round(exp(-12), digits=6)
-fig1c = Gibbdist_plot(β_arr, wvar_arr, "Gibbs dist. of θ samples corresp. to high variance of IS wts. (> $th)", rev=true, thresh=th)
-th = Int(0.4*nMC)
-fig2c = Gibbdist_plot(β_arr, wess_arr, "Gibbs dist. of θ samples corresp. to low ESS (<= $th)", rev=false, thresh=th)
-th = Int(round(exp(-7)*nMC))
-fig3c = Gibbdist_plot(β_arr, hess_arr, "Gibbs dist. of θ samples corresp. to low mod. ESS (<= $th)", rev=false, thresh=th)
+end
+
 
 
 # misc. plots ###################################################################
@@ -233,15 +320,18 @@ contour!(ax, θ1rng, θ2rng, c_mat, levels=0:0.1:1)
 fig
 
 
-# plot Gibbs distribution of samples
+# plot samples from original sampling density
+xplot = LinRange(-5, 5, 1000)
 fig = Figure(resolution = (600, 600))
 ax = Axis(fig[1, 1],  xlabel="x", ylabel="pdf(x)",
           title="Gibbs distribution of samples")
-for θi in θsamp
+for θi in θsamp[1:10:1000]
     πg = Gibbs(πgibbs0, β=1.0, θ=θi)
-    lines!(ax, xplot, updf.(πg, xplot) ./ normconst(πg, ξx, wx), color=(:steelblue, 1))
+    lines!(ax, xplot, updf.(πg, xplot) ./ normconst(πg, ξx, wx))
 end
 fig
+
+# plot samples from active subspace
 
 
 
