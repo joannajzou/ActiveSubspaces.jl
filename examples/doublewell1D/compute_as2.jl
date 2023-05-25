@@ -4,7 +4,7 @@ using Distributions
 using LinearAlgebra
 using JLD
 
-include("model_param1.jl")
+include("model_param2.jl")
 include("qoi_meanenergy.jl")
 
 
@@ -54,7 +54,7 @@ MCint = MCMC(nMC, nuts, ρx0)
 nβ = length(βarr)
 
 # θ samples for MC integration 
-nsamp_arr = [1000, 2000, 4000, 8000] # 1500 
+nsamp_arr = [1000, 3000, 6000] # 1500 
 nrepl = 1                   # number of replications of sampling
 
 
@@ -135,13 +135,13 @@ for n = 1:length(nsamp_arr)
 
     # save data ###############################################################################################
 
-    JLD.save("data/DW1D_MC_2_nsamp={$nsamp}_nrepl={$nrepl}.jld",
+    JLD.save("data2/DW1D_P2_MC_nsamp={$nsamp}_nrepl={$nrepl}.jld",
         "n_θsamp", nsamp,
         "n_xsamp", nMC,
         "C", CMC,
     )
 
-    JLD.save("data/DW1D_ISU_nsamp={$nsamp}_nrepl={$nrepl}.jld",
+    JLD.save("data2/DW1D_P2_ISU_nsamp={$nsamp}_nrepl={$nrepl}.jld",
         "n_θsamp", nsamp,
         "n_xsamp", nMC,
         "π_bias", πu,
@@ -149,7 +149,7 @@ for n = 1:length(nsamp_arr)
         "metrics", metrics_u,
     )
 
-    JLD.save("data/DW1D_ISG_nsamp={$nsamp}_nrepl={$nrepl}.jld",
+    JLD.save("data2/DW1D_P2_ISG_nsamp={$nsamp}_nrepl={$nrepl}.jld",
         "n_θsamp", nsamp,
         "n_xsamp", nMC,
         "βarr", βarr,
@@ -159,7 +159,7 @@ for n = 1:length(nsamp_arr)
 
 end
 
-# JLD.save("data/DW1D_Ref.jld",
+# JLD.save("data2/DW1D_Ref.jld",
 #         "ngrid", ngrid,
 #         "Cref", Cref,
 #     )
