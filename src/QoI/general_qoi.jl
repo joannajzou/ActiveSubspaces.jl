@@ -16,40 +16,6 @@ Defines the struct for computing the quantity of interest (QoI) as the expected 
 end
 
 
-function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GeneralQoI; kwargs...) # for GeneralQoI
-    # fix parameters
-    qoim = GeneralQoI(h = x -> qoi.h(x, θ), p=qoi.p)
-
-    A = Dict(kwargs) # arguments
-
-    if haskey(A, :ξ) & haskey(A, :w)                                            # quadrature integration
-        return expectation_(qoim, A[:ξ], A[:w])
-
-    elseif haskey(A, :g) & haskey(A, :xsamp)                                    # importance sampling (samples provided)
-        return expectation_(qoim, A[:g], A[:xsamp])
-
-    elseif haskey(A, :g) & haskey(A, :n) & haskey(A, :sampler) & haskey(A, :ρ0) # importance sampling (by MCMC)
-        return expectation_(qoim, A[:g], A[:n], A[:sampler], A[:ρ0])
-
-    elseif haskey(A, :g) & haskey(A, :n)                                        # importance sampling (by MC)                
-        return expectation_(qoim, A[:g], A[:n]) 
-
-    elseif haskey(A, :n) & haskey(A, :sampler) & haskey(A, :ρ0)                 # MCMC sampling
-        return expectation_(qoim, A[:n], A[:sampler], A[:ρ0])
-
-    elseif haskey(A, :n)                                                        # Monte Carlo sampling
-        return expectation_(qoim, A[:n])
-
-    elseif haskey(A, :xsamp)                                                    # samples provided
-        return expectation_(qoim, A[:xsamp])
-
-    else
-        println("ERROR: key word arguments missing or invalid")
-
-    end
-end
-
-
 # quadrature integration
 function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GeneralQoI, integrator::QuadIntegrator)
     # fix parameters
