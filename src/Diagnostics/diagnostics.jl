@@ -7,8 +7,7 @@ function init_metrics_dict(nrepl)
     metrics["wvar"] = Vector{Vector{Float64}}(undef, nrepl)
     metrics["wESS"] = Vector{Vector{Float64}}(undef, nrepl)
     metrics["wdiag"] = Vector{Vector{Float64}}(undef, nrepl)
-    metrics["w̃ESS"] = Vector{Vector{Float64}}(undef, nrepl)
     return metrics
 end
 
-export ForstnerDistance, WeightedSubspaceDistance, EffSampleSize, ISWeightVariance, ISWeightESS, ISWeightDiagnostic
+export ForstnerDistance, WeightedSubspaceDistance, EffSampleSize, ISWeightVariance, ISWeightESS, ISWeightDiagnostic, init_metrics_dict
