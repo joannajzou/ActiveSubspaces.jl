@@ -13,7 +13,7 @@ include("mc_utils.jl")
 # define integrators #########################################################################################
 
 # QuadIntegrator
-ngrid = 20                                      # number of θ quadrature points in 1D
+ngrid = 100                                     # number of θ quadrature points in 1D
 ξθ, wθ = gausslegendre(ngrid, θrng[1], θrng[2]) # 2D quad points over θ
 ξx, wx = gausslegendre(200, -10, 10)            # 1D quad points over x
 GQint = GaussQuadrature(ξx, wx)
@@ -29,13 +29,13 @@ MCint = MCMC(nMC, nuts, ρx0)
 nβ = length(βarr)
 
 # θ samples for MC integration 
-nsamp_arr = [10, 50, 100]
-nrepl = 1                                       # number of replications of sampling
+nsamp_arr = [1000, 2000, 4000, 6000, 8000, 10000]
+nrepl = 10                                      # number of replications of sampling
 
 
 
 # compute reference covariance matrix ######################################################################
-Cref = compute_covmatrix_ref((ξθ, wθ), q, ρθ, GQint)
+# Cref = compute_covmatrix_ref((ξθ, wθ), q, ρθ, GQint)
 
 
 
@@ -80,20 +80,26 @@ for j = 1:nrepl
 
 
     # save data ###############################################################################################
+    try
+        path = "data1/repl$j"
+        run(`mkdir -p $path`)
+    catch
+    end
 
-    JLD.save("data1/DW1D_MC_nsamp=$(nsamptot)_repl=$j.jld",
+
+    JLD.save("data1/repl$j/DW1D_MC_nsamp=$(nsamptot).jld",
         "nx", nMC,
         "C", CMC,
     )
 
-    JLD.save("data1/DW1D_ISU_nsamp=$(nsamptot)_repl=$j.jld",
+    JLD.save("data1/repl$j/DW1D_ISU_nsamp=$(nsamptot).jld",
         "nx", nMC,
         "π_bias", πu,
         "C", CIS_u,
         "metrics", metrics_u,
     )
 
-    JLD.save("data1/DW1D_ISG_nsamp=$(nsamptot)_repl=$j.jld",
+    JLD.save("data1/repl$j/DW1D_ISG_nsamp=$(nsamptot).jld",
         "nx", nMC,
         "βarr", βarr,
         "C", CIS_g,
