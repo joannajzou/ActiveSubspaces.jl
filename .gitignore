@@ -1,0 +1,17 @@
+Manifest.toml
+*.DS_Store
+*.zip
+*.yaml
+*.pdf
+*.jld
+*.npz
+*.ace
+*.xyz
+
+# generated docs
+# docs/build/
+# docs/src/generated/
+
+# data too large for github
+examples/lammps_ace_ar/ACE_MD
+examples/doublewell1D/data1
