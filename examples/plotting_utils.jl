@@ -1,27 +1,48 @@
-function plot_val_metric(val_type::String, nsamp_arr::Vector{Int64}, val_tup::Tuple, lab_tup::Tuple, ylab::String, ttl::String; logscl=true)
+using StatsBase
+
+function plot_val_metric(val_type::String, val_tup::Tuple, lab_tup::Tuple, ylab::String, ttl::String; logscl=true)
+    colors = [:purple, :blue, :green, :orange, :red] 
+    nsamp_arr = collect(keys(val_tup[1][val_type]))
+
     fig = Figure(resolution=(800, 500))
     if logscl == true
-        ax = Axis(fig[1,1], xlabel="number of samples (n)", ylabel=ylab,
+        ax = Axis(fig[1,1], xlabel="number of samples (n)", ylabel=ylab, xticks=(nsamp_arr, [string(nsamp) for nsamp in nsamp_arr]),
         title=ttl, xscale=log10, yscale=log10)   
     else
-        ax = Axis(fig[1,1], xlabel="number of samples (n)", ylabel=ylab,
+        ax = Axis(fig[1,1], xlabel="number of samples (n)", ylabel=ylab, xticks=(nsamp_arr, [string(nsamp) for nsamp in nsamp_arr]),
         title=ttl, xscale=log10) 
     end
-    for (val_i, lab_i) in zip(val_tup, lab_tup)
-        scatterlines!(ax, nsamp_arr, abs.(val_i[val_type]), label=lab_i)
+    offset_ratio = [-0.08, -0.04, 0, 0.04, 0.08]
+    # offsets = Point[(-20, 0), (-10, 0), (0,0), (10,0), (20,0)]
+    # offsets = [exp.(os) for os in offsets]
+    for (i, val_i, lab_i) in zip(1:length(val_tup), val_tup, lab_tup)
+        val_med = [median(val_i[val_type][k]) for k in nsamp_arr]
+        val_hi = [percentile(val_i[val_type][k], 75) for k in nsamp_arr] # .+ 1e-6
+        val_lo = [percentile(val_i[val_type][k], 25) for k in nsamp_arr] # .+ 1e-6
+        offsets = offset_ratio[i]*nsamp_arr
+
+        for k = 1:length(nsamp_arr)
+            nsamp = nsamp_arr[k]
+            if k == 1
+                scatter!(ax, [nsamp + offsets[k]], [val_med[k]], color=colors[i], label=lab_i)
+            else
+                scatter!(ax, [nsamp + offsets[k]], [val_med[k]], color=colors[i])
+            end
+            rangebars!(ax, [nsamp + offsets[k]], [val_lo[k]], [val_hi[k]], color=(colors[i], 0.3), linewidth=2, whiskerwidth=2e1 * nsamp)
+        end
     end
     axislegend(ax, position=:ct)
     fig
 end
 
 function plot_IS_diagnostic(met_type::String, met_tup::Tuple, lab_tup::Tuple, ylab::String, ttl::String; logscl=false)
-    w_arr = [met_i[met_type][1] for met_i in met_tup]
+    w_arr = [met_i[met_type] for met_i in met_tup]
     nIS = length(w_arr)
 
     cmin = minimum([minimum(wi) for wi in w_arr])       # minimum value for colorbar
     cmax = maximum([maximum(wi) for wi in w_arr])       # maximum value for colorbar
 
-    θsamp = met_tup[1]["θsamp"][1]
+    θsamp = met_tup[1]["θsamp"]
     θmat = reduce(hcat, θsamp)
 
     if logscl == true
@@ -51,8 +72,8 @@ end
 
 
 function plot_IS_samples(πg0::Gibbs, met_type::String, met_tup::Tuple, lab_tup::Tuple, dist::Tuple, ttl::String, xlim::Vector, quadpts::Tuple; rev=false, nsamp=100, thresh=:none)
-    w_arr = [met_i[met_type][1] for met_i in met_tup]
-    θsamp = met_tup[1]["θsamp"][1]
+    w_arr = [met_i[met_type] for met_i in met_tup]
+    θsamp = met_tup[1]["θsamp"]
     nIS = length(w_arr)
 
     # initialize figure
@@ -129,22 +150,21 @@ function compute_invcdf(w::Vector{Float64}; thresh::Union{Nothing,Vector{Float64
 end
 
 
-function get_medlimit(met_type::String, BD::String, nsamp_arr::Vector{Int64}, nrepl_arr::Vector{Int64}; β=nothing)
-    M = length(nsamp_arr)
-    wmax = Vector{Float64}(undef, M)
-    wmin = Vector{Float64}(undef, M)
+# function get_medlimit(met_type::String, BD::String, nsamptot::Int64, repl::Int64; β=nothing)
+#     M = length(nsamp_arr)
+#     wmax = Vector{Float64}(undef, M)
+#     wmin = Vector{Float64}(undef, M)
 
-    for (j, nsamp, nrepl) in zip(1:M, nsamp_arr, nrepl_arr)
-        if β == nothing
-            metrics = JLD.load("data1/DW1D_$(BD)_nsamp={$nsamp}_nrepl={$nrepl}.jld")["metrics"]
-        else
-            metrics = JLD.load("data1/DW1D_$(BD)_nsamp={$nsamp}_nrepl={$nrepl}.jld")["metrics"][β]
-        end
-        wmax[j] = maximum(metrics[met_type][1])
-        wmin[j] = minimum(metrics[met_type][1])
-    end
-    return median(wmin), median(wmax)
-end
+#     if β == nothing
+#         metrics = JLD.load("data1/repl$nrepl/DW1D_$(BD)_nsamp=$nsamptot.jld")["metrics"]
+#     else
+#         metrics = JLD.load("data1/repl$nrepl/DW1D_$(BD)_nsamp=$nsamptot.jld")["metrics"][β]
+#     end
+#         wmax[j] = maximum(metrics[met_type])
+#         wmin[j] = minimum(metrics[met_type])
+#     end
+#     return median(wmin), median(wmax)
+# end
 
 
 function get_medlimit(met_type::String, met_tup::Tuple)
@@ -157,22 +177,22 @@ function get_medlimit(met_type::String, met_tup::Tuple)
 end
 
 
-function get_maxlimit(met_type::String, BD::String, nsamp_arr::Vector{Int64}, nrepl_arr::Vector{Int64})
-    M = length(nsamp_arr)
-    wmax = Vector{Float64}(undef, M)
-    wmin = Vector{Float64}(undef, M)
+# function get_maxlimit(met_type::String, BD::String, nsamp_arr::Vector{Int64}, nrepl_arr::Vector{Int64})
+#     M = length(nsamp_arr)
+#     wmax = Vector{Float64}(undef, M)
+#     wmin = Vector{Float64}(undef, M)
 
-    for (j, nsamp, nrepl) in zip(1:M, nsamp_arr, nrepl_arr)
-        if β == nothing
-            metrics = JLD.load("data1/DW1D_$(BD)_nsamp={$nsamp}_nrepl={$nrepl}.jld")["metrics"]
-        else
-            metrics = JLD.load("data1/DW1D_$(BD)_nsamp={$nsamp}_nrepl={$nrepl}.jld")["metrics"][β]
-        end
-        wmax[j] = maximum(metrics[met_type][1])
-        wmin[j] = minimum(metrics[met_type][1])
-    end
-    return minimum(wmin), maximum(wmax)
-end
+#     for (j, nsamp, nrepl) in zip(1:M, nsamp_arr, nrepl_arr)
+#         if β == nothing
+#             metrics = JLD.load("data1/DW1D_$(BD)_nsamp={$nsamp}_nrepl={$nrepl}.jld")["metrics"]
+#         else
+#             metrics = JLD.load("data1/DW1D_$(BD)_nsamp={$nsamp}_nrepl={$nrepl}.jld")["metrics"][β]
+#         end
+#         wmax[j] = maximum(metrics[met_type][1])
+#         wmin[j] = minimum(metrics[met_type][1])
+#     end
+#     return minimum(wmin), maximum(wmax)
+# end
 
 
 function get_maxlimit(met_type::String, met_tup::Tuple)
@@ -185,42 +205,52 @@ function get_maxlimit(met_type::String, met_tup::Tuple)
 end
 
 
-function plot_IS_cdf(met_type::String, BD::String, nsamp_arr::Vector{Int64}, nrepl_arr::Vector{Int64}, ttl::String; β=nothing, limittype="med")
-    M = length(nsamp_arr)
-    if limittype == "med"; wmin, wmax = get_medlimit(met_type, BD, nsamp_arr, nrepl_arr; β=β);
-    elseif limittype == "max"; wmin, wmax = get_maxlimit(met_type, BD, nsamp_arr, nrepl_arr; β=β); end
-    thresh = exp.(LinRange(log.(wmin), log.(wmax), 50))
+# function plot_IS_cdf(met_type::String, BD::String, nsamp_arr::Vector{Int64}, nrepl_arr::Vector{Int64}, ttl::String; β=nothing, limtype::Union{String, Tuple}=nothing)
+#     M = length(nsamp_arr)
+#     if limtype == nothing
+#         wmin = 1e-8
+#         _, wmax = get_maxlimit(met_type, BD, nsamp_arr, nrepl_arr; β=β)
+#     elseif limtype == "med"; wmin, wmax = get_medlimit(met_type, BD, nsamp_arr, nrepl_arr; β=β);
+#     elseif limtype == "max"; wmin, wmax = get_maxlimit(met_type, BD, nsamp_arr, nrepl_arr; β=β);
+#     else; wmin = limtype[1]; wmax = limtype[2]; end
 
-    fig = Figure(resolution = (450, 500))
-    ax = Axis(fig[1,1], xlabel="threshold (t)", ylabel="P[w > t]", xscale=log10, title=ttl)
+#     thresh = exp.(LinRange(log.(wmin), log.(wmax), 50))
+
+#     fig = Figure(resolution = (450, 500))
+#     ax = Axis(fig[1,1], xlabel="threshold (t)", ylabel="P[w > t]", xscale=log10, title=ttl)
 
     
-    for (k, nsamp, nrepl) in zip(1:M, nsamp_arr, nrepl_arr)
-        if β == nothing
-            metrics = JLD.load("data1/DW1D_$(BD)_nsamp={$nsamp}_nrepl={$nrepl}.jld")["metrics"]
-        else
-            metrics = JLD.load("data1/DW1D_$(BD)_nsamp={$nsamp}_nrepl={$nrepl}.jld")["metrics"][β]
-        end
-        w = metrics[met_type][1]
-        Pi = compute_invcdf(w; thresh=thresh)
-        # scatter!(ax, thresh, Pi, color=k, colormap=:Blues, colorrange=(0,M), label="n = $nsamp")
-        lines!(ax, thresh, Pi, color=k, colormap=:Blues, colorrange=(0,M), label="n = $nsamp")
-    end
+#     for (k, nsamp, nrepl) in zip(1:M, nsamp_arr, nrepl_arr)
+#         if β == nothing
+#             metrics = JLD.load("data1/DW1D_$(BD)_nsamp={$nsamp}_nrepl={$nrepl}.jld")["metrics"]
+#         else
+#             metrics = JLD.load("data1/DW1D_$(BD)_nsamp={$nsamp}_nrepl={$nrepl}.jld")["metrics"][β]
+#         end
+#         w = metrics[met_type][1]
+#         Pi = compute_invcdf(w; thresh=thresh)
+#         # scatter!(ax, thresh, Pi, color=k, colormap=:Blues, colorrange=(0,M), label="n = $nsamp")
+#         lines!(ax, thresh, Pi, color=k, colormap=:Blues, colorrange=(0,M), label="n = $nsamp")
+#     end
 
-    axislegend(ax)
-    return fig
-end
+#     axislegend(ax)
+#     return fig
+# end
 
 
-function plot_IS_cdf(met_type::String, met_tup::Tuple, lab_tup::Tuple, ttl::String; limittype="med")
+function plot_IS_cdf(met_type::String, met_tup::Tuple, lab_tup::Tuple, ylab::String, ttl::String; limtype::Union{String, Tuple}=nothing)
     M = length(met_tup)
-    w_arr = [met_i[met_type][1] for met_i in met_tup]
-    if limittype == "med"; wmin, wmax = get_medlimit(met_type, met_tup);
-    elseif limittype == "max"; wmin, wmax = get_maxlimit(met_type, met_tup); end
+    w_arr = [met_i[met_type] for met_i in met_tup]
+    if limtype == nothing
+        wmin = 1e-8
+        _, wmax = get_maxlimit(met_type, met_tup)
+    elseif limtype == "med"; wmin, wmax = get_medlimit(met_type, met_tup);
+    elseif limtype == "max"; wmin, wmax = get_maxlimit(met_type, met_tup);
+    else; wmin = limtype[1]; wmax = limtype[2]; end
+
     thresh = exp.(LinRange(log.(wmin), log.(wmax), 50))
 
     fig = Figure(resolution = (450, 500))
-    ax = Axis(fig[1,1], xlabel="threshold (t)", ylabel="P[w > t]", xscale=log10, title=ttl)
+    ax = Axis(fig[1,1], xlabel="threshold (t)", ylabel=ylab, xscale=log10, title=ttl)
 
     
     for (k, wi) in zip(1:M, w_arr)
