@@ -40,12 +40,12 @@ confs, _ = load_data("data/lj-ar.yaml", YAML(:Ar, u"eV", u"Å"))
 
 # Define ACE basis
 ace = ACE(species = [:Ar],         # species
-          body_order = 4,          # 2-body
+          body_order = 2,          # 2-body
           polynomial_degree = 8,   # 8 degree polynomials
           wL = 1.0,                # Defaults, See ACE.jl documentation 
           csp = 1.0,               # Defaults, See ACE.jl documentation 
           r0 = 1.0,                # minimum distance between atoms
-          rcutoff = 5.0)           # cutoff radius 
+          rcutoff = 4.0)           # cutoff radius 
 
 # Update dataset by adding energy (local) descriptors
 println("Computing local descriptors")
@@ -91,7 +91,7 @@ plot_error(e_test_err)
 d = length(lb.β)
 Σβ = 100 * Hermitian(Σ) + 1e-12*I(d)
 πβ = MvNormal(lb.β, Σβ)
-JLD.save("coeff_posterior.jld", "π", πβ)
+JLD.save("coeff_posterior_2body.jld", "π", πβ)
 
 
 

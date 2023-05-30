@@ -15,16 +15,16 @@ include("define_md_LAMMPS_ace.jl")
 
 # Define ACE basis
 ace = ACE(species = [:Ar],         # species
-          body_order = 4,          # 2-body
+          body_order = 2,          # 2-body
           polynomial_degree = 8,   # 8 degree polynomials
           wL = 1.0,                # Defaults, See ACE.jl documentation 
           csp = 1.0,               # Defaults, See ACE.jl documentation 
           r0 = 1.0,                # minimum distance between atoms
-          rcutoff = 5.0)           # cutoff radius 
+          rcutoff = 4.0)           # cutoff radius 
 
 
 # compute energy with MD #############################################################################
-nsamp = 100                # number of coefficient samples
+nsamp = 5                # number of coefficient samples
 
 # Run MD for different coefficients and different seeds
 Tend = Int(0.5E6)       # number of steps
@@ -32,7 +32,7 @@ dT = 50                 # time step
 Temp = 0.65*120         # temperature
 
 # iterate over coefficient samples
-for coeff = 1 #:nsamp            
+for coeff = 18:1000 # nsamp            
     println("coeff $coeff")
 
     # create directory
@@ -40,8 +40,8 @@ for coeff = 1 #:nsamp
     run(`mkdir -p $save_dir`)
 
     # sample coefficients
-    # β = rand(πβ)
-    β = πβ.μ
+    β = rand(πβ)
+    # β = πβ.μ
     β_to_file(β, ace, save_dir)
 
     # for seed = 1:100
@@ -51,5 +51,3 @@ for coeff = 1 #:nsamp
     # end
 end
 
-
-file_dir = "./TEMP/"
