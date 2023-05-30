@@ -24,12 +24,12 @@ nuts = NUTS(1e-1)                               # Sampler struct
 MCint = MCMC(nMC, nuts, ρx0)
 
 # ISIntegrator
-πu = Uniform(-5,5)                              # importance sampling: uniform distribution
-βarr = [0.01, 0.2, 1.0]                         # importance sampling: temp parameter for Gibbs biasing dist.
+πu = Uniform(-3,3)                              # importance sampling: uniform distribution
+βarr = [0.02, 0.2, 1.0]                         # importance sampling: temp parameter for Gibbs biasing dist.
 nβ = length(βarr)
 
 # θ samples for MC integration 
-nsamp_arr = [1000, 2000, 4000, 6000, 8000, 10000]
+nsamp_arr = [1000, 2000, 4000, 8000, 16000]
 nrepl = 10                                      # number of replications of sampling
 
 
@@ -37,21 +37,37 @@ nrepl = 10                                      # number of replications of samp
 # compute reference covariance matrix ######################################################################
 # Cref = compute_covmatrix_ref((ξθ, wθ), q, ρθ, GQint)
 
+# JLD.save("data1/DW1D_Ref.jld",
+#         "ngrid", ngrid,
+#         "Cref", Cref,
+#     )
 
 
 # run MC trials #################################################################################
-for j = 1:nrepl
+try
+    path = "data1/repl$j"
+    run(`mkdir -p $path`)
+catch
+end
+
+for j = 5:nrepl
     println("================= REPLICATION nrepl = $j =================")
 
     # sample parameters
     nsamptot = nsamp_arr[end] # largest number of samples
     θsamp = [rand(ρθ) for i = 1:nsamptot]   
+    θsamp = remove_outliers(θsamp)
+    nsamp_arr[end] = length(θsamp)
 
-   
     # MC estimate ------------------------------------------------------------------------
     t = @elapsed ∇Qmc = compute_gradQ(θsamp, q, MCint; gradh=∇h) 
     CMC = compute_covmatrix(∇Qmc, nsamp_arr)
     println("Vanilla MC: $t sec.")
+
+    JLD.save("data1/repl$j/DW1D_MC_nsamp=$(nsamptot).jld",
+        "nx", nMC,
+        "C", CMC,
+    )
 
 
     # importance sampling - uniform ------------------------------------------------------
@@ -60,6 +76,13 @@ for j = 1:nrepl
     t = @elapsed ∇Qis_u, metrics_u = compute_gradQ(θsamp, q, ISint; gradh=∇h)
     CIS_u = compute_covmatrix(∇Qis_u, nsamp_arr)
     println("IS MC Uniform: $t sec.")
+
+    JLD.save("data1/repl$j/DW1D_ISU_nsamp=$(nsamptot).jld",
+        "nx", nMC,
+        "π_bias", πu,
+        "C", CIS_u,
+        "metrics", metrics_u,
+    )
 
 
     # importance sampling - Gibbs -------------------------------------------------------
@@ -78,27 +101,6 @@ for j = 1:nrepl
         println("IS MC Gibbs (β=$βi): $t sec.")
     end
 
-
-    # save data ###############################################################################################
-    try
-        path = "data1/repl$j"
-        run(`mkdir -p $path`)
-    catch
-    end
-
-
-    JLD.save("data1/repl$j/DW1D_MC_nsamp=$(nsamptot).jld",
-        "nx", nMC,
-        "C", CMC,
-    )
-
-    JLD.save("data1/repl$j/DW1D_ISU_nsamp=$(nsamptot).jld",
-        "nx", nMC,
-        "π_bias", πu,
-        "C", CIS_u,
-        "metrics", metrics_u,
-    )
-
     JLD.save("data1/repl$j/DW1D_ISG_nsamp=$(nsamptot).jld",
         "nx", nMC,
         "βarr", βarr,
@@ -108,7 +110,3 @@ for j = 1:nrepl
 
 end
 
-# JLD.save("data/DW1D_Ref.jld",
-#         "ngrid", ngrid,
-#         "Cref", Cref,
-#     )

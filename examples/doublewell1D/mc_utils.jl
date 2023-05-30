@@ -52,3 +52,13 @@ function init_IS_arrays(nsamp)
     w_arr = Vector{Vector{Float64}}(undef, nsamp)
     return ∇Q_arr, ∇h_arr, w_arr
 end
+
+
+function remove_outliers(θsamp)
+    θmat = reduce(hcat, θsamp)
+
+    ids1 = findall(x -> x <= 6.0, θmat[1,:])
+    ids2 = findall(x -> x >= 2.0, θmat[2,:])
+    ids = findall(x -> x in ids1, ids2)
+    return θsamp[ids]
+end
