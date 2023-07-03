@@ -43,9 +43,9 @@ This method is implemented with the user providing samples from the biasing dist
 
 # Arguments
 - `g :: Distribution`        : biasing distribution
-- `xsamp :: Vector{<:Real}`  : fixed set of samples
+- `xsamp :: Vector`          : fixed set of samples
 """
 struct ISSamples <: ISIntegrator
     g :: Distribution
-    xsamp :: Vector{<:Real}
+    xsamp :: Vector
 end

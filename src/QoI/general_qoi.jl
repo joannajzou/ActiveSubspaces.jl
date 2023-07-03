@@ -80,7 +80,7 @@ function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GeneralQoI, integrato
 
     logwt(x) = if hasupdf(integrator.g) # g has an unnormalized pdf
         logpdf(qoim.p, x) - logupdf(integrator.g, x)
-    else # g does not have an unnormalized pdf]
+    else # g does not have an unnormalized pdf
         logpdf(qoim.p, x) - logpdf(integrator.g, x)
     end
 

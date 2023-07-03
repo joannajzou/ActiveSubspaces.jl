@@ -39,8 +39,8 @@ Defines the struct containing pre-defined Monte Carlo samples to evaluate in int
 This method is implemented with the user providing samples from the distribution.
 
 # Arguments
-- `xsamp :: Vector{<:Real}`    : fixed set of samples
+- `xsamp :: Vector`    : fixed set of samples
 """
 struct MCSamples <: MCIntegrator
-    xsamp :: Vector{<:Real}
+    xsamp :: Vector
 end

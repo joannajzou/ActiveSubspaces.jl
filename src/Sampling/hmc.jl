@@ -14,6 +14,22 @@ struct HMC <: Sampler
 end
 
 
+"""
+function sample(lπ::Function, gradlπ::Function, sampler::HMC, n::Int64, x0::Vector{<:Real})
+
+Draw samples from target distribution π(x) using Hamiltonian Monte Carlo (HMC) from the AdvancedHMC package. Assumes multi-dimensional support (x::Vector).
+
+# Arguments
+- `lπ :: Function`        : log likelihood of target π
+- `gradlπ :: Function`    : gradient of log likelihood of π
+- `sampler :: HMC`        : Sampler struct specifying sampling algorithm
+- `n::Int64`              : number of samples (include number of samples for burn-in)
+- `x0::Vector{<:Real}`    : initial state
+
+# Outputs
+- `samples::Vector{Vector}`    : vector of samples from π
+
+"""
 # multi-d x: use AdvancedHMC
 function sample(lπ::Function, gradlπ::Function, sampler::HMC, n::Int64, x0::Vector{<:Real})
     D = length(x0)

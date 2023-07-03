@@ -135,6 +135,13 @@ See `expectation` for more information.
 - `integrator :: Integrator`            : struct specifying method of integration
 - `gradh :: Union{Function, Nothing}`   : gradient of qoi.h; if nothing, compute with ForwardDiff
 
+# Outputs
+- `expec_estimator :: Vector{<:Real}`   : estimate of vector-valued gradient of the expectation
+
+# Optional Outputs (from Importance Sampling)
+- `h(x) :: Vector`                      : integrand evaluations from importance sampling 
+- `wt(x) :: Vector`                     : weights from importance sampling 
+
 """
 function grad_expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integrator::Integrator; gradh::Union{Function, Nothing}=nothing)
     # compute gradient of h

@@ -30,7 +30,21 @@ end
 # computes Gauss Legendre quadrature points with change of domain
 import FastGaussQuadrature: gausslegendre
 
-function gausslegendre(npts, ll, ul)
+"""
+function gausslegendre(npts::Int64, ll::Real, ul::Real)
+
+Computes 1D Gauss-Legendre quadrature points with a change of domain to [ll, ul].
+
+# Arguments
+- `npts :: Int64`           : number of quadrature points
+- `ll :: Real`              : lower limit
+- `ul :: Real`              : upper limit
+
+# Outputs
+- `ξ :: Vector{<:Real}`     : quadrature points ranging [ll, ul]
+- `w :: Vector{<:Real}`     : quadrature weights
+"""
+function gausslegendre(npts::Int64, ll::Real, ul::Real)
     ξ, w = gausslegendre(npts) 
     ξz = (ul-ll) .* ξ / 2 .+ (ll+ul) / 2 # change of interval
     wz = (ul-ll)/2 * w
