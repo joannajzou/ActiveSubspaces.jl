@@ -19,6 +19,7 @@ using Distributions
 using FastGaussQuadrature
 using ForwardDiff
 using AdvancedHMC
+using InvertedIndices
 using JLD
 
 
