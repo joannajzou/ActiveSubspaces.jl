@@ -1,14 +1,57 @@
-abstract type Subspace end
+"""
+struct Subspace where T <: Real
+    
+Defines the struct containing variables of the active subspace.
 
-include("pca.jl")
-include("as.jl")
+# Arguments
+- `C :: Matrix{T}`          : covariance matrix
+- `λ :: Vector{T}`          : eigenvalues of covariance matrix
+- `W1 :: Matrix{T}`         : active subspace
+- `W2 :: Matrix{T}`         : inactive subspace
+- `π_y :: Distribution`     : marginal density of active variable
+- `π_z :: Distribution`     : marginal density of inactive variable
 
-
-function compute_covmatrix(dθ::Vector{T}) where T <: Vector{<:Real}
-    return Hermitian(mean(di*di' for di in dθ))
+"""
+struct Subspace
+    C :: Matrix{Real}           
+    λ :: Vector{Real}          
+    W1 :: Matrix{Real}         
+    W2 :: Matrix{Real}         
+    π_y :: Distribution     
+    π_z :: Distribution  
 end
 
 
+"""
+function compute_covmatrix(dθ::Vector{T}) where T <: Vector{<:Real}
+
+Computes covariance matrix from samples of feature vector dθ.
+
+# Arguments
+- `dθ :: Vector{Vector{<:Real}}`    : samples of feature vector
+
+# Outputs 
+- `C :: Matrix{Real}`            : empirical covariance matrix
+
+""" 
+function compute_covmatrix(dθ::Vector{T}) where T <: Vector{<:Real}
+    return Matrix(Hermitian(mean(di*di' for di in dθ)))
+end
+
+
+"""
+function compute_covmatrix(dθ::Vector{T}, nsamp_arr::Vector{Int64}) where T <: Vector{<:Real}
+
+Computes array of covariance matrices using varying sample sizes of feature vector dθ. All elements of nsamp_arr <= length(dθ).
+
+# Arguments
+- `dθ :: Vector{T}`                         : samples of feature vector
+- `nsamp_arr :: Vector{Int64}`              : subsets of samples
+
+# Outputs 
+- `C_arr :: Dict{Int64, Matrix{Float64}}`   : dictionary with keys being nsamp, values being covariance matrices
+
+""" 
 function compute_covmatrix(dθ::Vector{T}, nsamp_arr::Vector{Int64}) where T <: Vector{<:Real}
     C_arr = Dict{Int64, Matrix{Float64}}()
 
@@ -20,32 +63,222 @@ function compute_covmatrix(dθ::Vector{T}, nsamp_arr::Vector{Int64}) where T <: 
 end
 
 
-function select_eigendirections(dθ::Vector{T}, tol::Float64) where T <: Vector{<:Real}
+"""
+function compute_eigenbasis(dθ::Vector{T}) where T <: Vector{<:Real}
+
+Computes eigendecomposition of empirical covariance matrix of feature vector dθ.
+
+# Arguments
+- `dθ :: Vector{T}`                      : samples of feature vector
+
+# Outputs 
+- `C :: Matrix{Real}`                    : empirical covariance matrix
+- `λ :: Vector{Real}`                    : eigenvalues of C
+- `W :: Matrix{Real}`                    : eigenvectors of C
+
+""" 
+function compute_eigenbasis(dθ::Vector{T}) where T <: Vector{<:Real}
     C = compute_covmatrix(dθ)
-    λ, ϕ = eigen(C)
-    λ, ϕ = λ[end:-1:1], ϕ[:, end:-1:1] # reorder
+    λ, W = eigen(C)
+    idx = sortperm(λ, rev=true)
+    λ, W = λ[idx], W[:,idx] # reorder
+    return C, λ, W
+end
+
+
+"""
+function compute_eigenbasis(C::Matrix{T}) where T <: Real
+
+Computes eigendecomposition of provided covariance matrix.
+
+# Arguments
+- `C :: Matrix{T}`                       : covariance matrix
+
+# Outputs 
+- `C :: Matrix{Real}`                    : covariance matrix (same as input)
+- `λ :: Vector{Real}`                    : eigenvalues of C
+- `W :: Matrix{Real}`                    : eigenvectors of C
+
+""" 
+function compute_eigenbasis(C::Matrix{T}) where T <: Real
+    λ, W = eigen(C)
+    idx = sortperm(λ, rev=true)
+    λ, W = λ[idx], W[:,idx] # reorder
+    return C, λ, W
+end
+
+
+"""
+function compute_marginal(Wsub::Matrix{T}, ρθ::MvNormal) where T <: Real
+
+Computes marginal density of the active/inactive variable, given a multivariate normal parameter density.
+
+# Arguments
+- `Wsub :: Matrix{T}`                    : active/inactive subspace
+- `ρθ :: MvNormal`                       : sampling density for the parameter θ
+
+# Outputs 
+- `πsub :: Distribution`                 : marginal density of active/inactive variable
+
+""" 
+function compute_marginal(Wsub::Matrix{T}, ρθ::MvNormal) where T <: Real
+    μsub = Wsub' * ρθ.μ
+    Σsub = Wsub' * ρθ.Σ * Wsub
+    πsub = MvNormal(μsub, Σsub)
+    return πsub
+end
+
+
+"""
+function find_subspaces(W::Matrix{T}, ρθ::Distribution, tol::Float64, λ::Vector{T}) where T <: Real
+
+Partitions active and inactive subspaces. The partition point is determined by the tol parameter, which is the percent of residual variance.
+Example: set tol=0.05 to compute subspace explaining 95% of variance in the QoI. 
+
+# Arguments
+- `W :: Matrix{T}`                       : eigenvectors of d-by-d matrix
+- `ρθ :: Distribution`                   : sampling density for the parameter θ
+- `tol :: Float64`                       : tolerance representing cutoff percent of residual variance
+- `λ :: Vector{T}`                       : eigenvalues of d-by-d matrix
+
+# Outputs 
+- `W1 :: Matrix{T}`                      : active subspace (d-by-r matrix)
+- `W2 :: Matrix{T}`                      : inactive subspace (d-by-(d-r) matrix)
+- `π_y :: Distribution`                  : marginal density of active variable y
+- `π_z :: Distribution`                  : marginal density of inactive variable z 
+
+""" 
+function find_subspaces(W::Matrix{T}, ρθ::Distribution, tol::Float64, λ::Vector{T}) where T <: Real
     Σ = 1.0 .- cumsum(λ) / sum(λ)
-    W = ϕ[:, Σ .> tol]
-    return C, λ, W
+    id = findall(x -> x .> tol, Σ)[end]
+    W1 = W[:, 1:id] # active subspace
+    W2 = W[:, id+1:end]  # inactive subspace
+
+    # sampling density of active variable y
+    π_y = compute_marginal(W1, ρθ)
+
+    # sampling density of inactive variable z
+    π_z = compute_marginal(W2, ρθ)
+
+    return W1, W2, π_y, π_z
 end
 
 
-function select_eigendirections(dθ::Vector{T}, tol::Int) where T <: Vector{<:Real}
-    C = compute_covmatrix(dθ)
-    λ, ϕ = eigen(C)
-    λ, ϕ = λ[end:-1:1], ϕ[:, end:-1:1] # reorder
-    W = ϕ[:, 1:tol]
-    return C, λ, W
+"""
+function find_subspaces(W::Matrix{T}, ρθ::Distribution, tol::Int64) where T <: Real
+
+Partitions active and inactive subspaces. The dimension of the active subspace is specified by the tol parameter. 
+
+# Arguments
+- `W :: Matrix{T}`                       : eigenvectors of d-by-d matrix
+- `ρθ :: Distribution`                   : sampling density for the parameter θ
+- `tol :: Int64`                         : cutoff dimension of active subspace (r)
+
+# Outputs 
+- `W1 :: Matrix{T}`                      : active subspace (d-by-r matrix)
+- `W2 :: Matrix{T}`                      : inactive subspace (d-by-(d-r) matrix)
+- `π_y :: Distribution`                  : marginal density of active variable y
+- `π_z :: Distribution`                  : marginal density of inactive variable z 
+
+""" 
+function find_subspaces(W::Matrix{T}, ρθ::Distribution, tol::Int64) where T <: Real
+    W1 = W[:, 1:tol] # active subspace
+    W2 = W[:, tol+1:end] # inactive subspace
+
+    # sampling density of active variable y
+    π_y = compute_marginal(W1, ρθ)
+
+    # sampling density of inactive variable z
+    π_z = compute_marginal(W2, ρθ)
+
+    # save in struct
+    return W1, W2, π_y, π_z
 end
 
 
-function select_eigendirections(C::Matrix{T}, tol::Int) where T <: Real
-    λ, ϕ = eigen(C)
-    λ, ϕ = λ[end:-1:1], ϕ[:, end:-1:1] # reorder
-    W = ϕ[:, 1:tol]
-    return C, λ, W
+"""
+function compute_as(dθ::Vector{T}, ρθ::Distribution, tol::Float64) where T <: Vector{<:Real}
+
+Computes the active subspace from a set of feature vectors, their sampling density, and tolerance parameter. 
+
+# Arguments
+- `dθ :: Vector{T}`                      : samples of feature vector
+- `ρθ :: Distribution`                   : sampling density for the parameter θ
+- `tol :: Float64`                       : tolerance representing cutoff percent of residual variance
+
+# Outputs 
+- `as :: Subspace`                       : struct containing W1, W2, π_y, π_z  
+
+""" 
+function compute_as(dθ::Vector{T}, ρθ::Distribution, tol::Float64) where T <: Vector{<:Real}
+    C, λ, W = compute_eigenbasis(dθ)
+    W1, W2, π_y, π_z = find_subspaces(W, ρθ, tol, λ)
+    as = Subspace(C, λ, W1, W2, π_y, π_z)
+    return as
 end
 
 
-export AS, PCA, find_subspace, compute_covmatrix, select_eigendirections
+"""
+function compute_as(dθ::Vector{T}, ρθ::Distribution, tol::Int64) where T <: Vector{<:Real}
 
+Computes the active subspace from a set of feature vectors, their sampling density, and tolerance parameter. 
+
+# Arguments
+- `dθ :: Vector{T}`                      : samples of feature vector
+- `ρθ :: Distribution`                   : sampling density for the parameter θ
+- `tol :: Int64`                         : cutoff dimension of active subspace (r)
+
+# Outputs 
+- `as :: Subspace`                       : struct containing W1, W2, π_y, π_z  
+
+""" 
+function compute_as(dθ::Vector{T}, ρθ::Distribution, tol::Int64) where T <: Vector{<:Real}
+    C, λ, W = compute_eigenbasis(dθ)
+    W1, W2, π_y, π_z = find_subspaces(W, ρθ, tol)
+    as = Subspace(C, λ, W1, W2, π_y, π_z)
+    return as
+end
+
+
+"""
+function sample_as(n::Int64, as::Subspace)
+
+Samples from the active subspace by fixing inactive variables at nominal (mean) value.
+
+# Arguments
+- `n :: Int64`                           : number of samples
+- `as :: Subspace`                       : struct containing W1, W2, π_y, π_z  
+
+# Outputs 
+- `ysamp :: Vector{Vector{Float64}}`     : samples of active variable
+- `θsamp :: Vector{Vector{Float64}}`     : samples transformed into original parameter space
+
+""" 
+function sample_as(n::Int64, as::Subspace)
+    ysamp = [rand(as.π_y) for i = 1:n] # sample active variable
+    μz = as.π_z.μ # fix inactive variable
+    θsamp = [as.W1*y + as.W2*μz for y in ysamp] # compute corresponding θ
+    return ysamp, θsamp
+end
+
+
+"""
+function sample_as(n::Int64, as::Subspace)
+
+Samples from the active subspace by marginalization over inactive variables.
+
+# Arguments
+- `n :: Int64`                           : number of samples
+- `as :: Subspace`                       : struct containing W1, W2, π_y, π_z  
+
+# Outputs 
+- `ysamp :: Vector{Vector{Float64}}`     : samples of active variable
+- `θsamp :: Vector{Vector{Float64}}`     : samples transformed into original parameter space
+
+""" 
+# function sample_as(n::Int64, as::Subspace)
+#     # TO DO 
+# end
+
+
+export Subspace, compute_covmatrix, compute_eigenbasis, find_subspaces, compute_as, sample_as
