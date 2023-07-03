@@ -13,5 +13,9 @@ Manifest.toml
 # docs/src/generated/
 
 # data too large for github
-examples/lammps_ace_ar/ACE_MD
+examples/lammps_ace_ar/ACE_MD_2body_8deg
+examples/lammps_ace_ar/ACE_MD_2body_16deg
+examples/lammps_ace_ar/ACE_MD_3body_8deg
 examples/doublewell1D/data1
+
+examples/log.lammps
