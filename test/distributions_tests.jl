@@ -27,7 +27,6 @@ using Test
     # check type
     @test typeof(d0a) == Gibbs
 
-
     # check supplementary functions
     @test params(d0) == (nothing, nothing)
     @test params(d1) == params(d0a) == (1.0, nothing)
