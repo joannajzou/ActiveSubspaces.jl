@@ -4,8 +4,14 @@ using Distributions
 using LinearAlgebra
 using JLD
 
-include("model_param1.jl")
+# select model
+mnum = 2
+include("model_param$mnum.jl")
+
+# select qoi
 include("qoi_meanenergy.jl")
+
+# load utils
 include("mc_utils.jl")
 
 
@@ -35,22 +41,22 @@ nrepl = 10                                      # number of replications of samp
 
 
 # compute reference covariance matrix ######################################################################
-# Cref = compute_covmatrix_ref((ξθ, wθ), q, ρθ, GQint)
+Cref = compute_covmatrix_ref((ξθ, wθ), q, ρθ, GQint)
 
-# JLD.save("data1/DW1D_Ref.jld",
-#         "ngrid", ngrid,
-#         "Cref", Cref,
-#     )
+JLD.save("data$mnum/DW1D_Ref.jld",
+        "ngrid", ngrid,
+        "Cref", Cref,
+    )
 
 
 # run MC trials #################################################################################
 try
-    path = "data1/repl$j"
+    path = "data$mnum/repl$j"
     run(`mkdir -p $path`)
 catch
 end
 
-for j = 5:nrepl
+for j = 1:nrepl
     println("================= REPLICATION nrepl = $j =================")
 
     # sample parameters
@@ -64,7 +70,7 @@ for j = 5:nrepl
     CMC = compute_covmatrix(∇Qmc, nsamp_arr)
     println("Vanilla MC: $t sec.")
 
-    JLD.save("data1/repl$j/DW1D_MC_nsamp=$(nsamptot).jld",
+    JLD.save("data$mnum/repl$j/DW1D_MC_nsamp=$(nsamptot).jld",
         "nx", nMC,
         "C", CMC,
     )
@@ -77,7 +83,7 @@ for j = 5:nrepl
     CIS_u = compute_covmatrix(∇Qis_u, nsamp_arr)
     println("IS MC Uniform: $t sec.")
 
-    JLD.save("data1/repl$j/DW1D_ISU_nsamp=$(nsamptot).jld",
+    JLD.save("data$mnum/repl$j/DW1D_ISU_nsamp=$(nsamptot).jld",
         "nx", nMC,
         "π_bias", πu,
         "C", CIS_u,
@@ -101,7 +107,7 @@ for j = 5:nrepl
         println("IS MC Gibbs (β=$βi): $t sec.")
     end
 
-    JLD.save("data1/repl$j/DW1D_ISG_nsamp=$(nsamptot).jld",
+    JLD.save("data$mnum/repl$j/DW1D_ISG_nsamp=$(nsamptot).jld",
         "nx", nMC,
         "βarr", βarr,
         "C", CIS_g,
