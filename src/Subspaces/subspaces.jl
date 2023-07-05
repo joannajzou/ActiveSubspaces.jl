@@ -81,7 +81,10 @@ function compute_eigenbasis(dθ::Vector{T}) where T <: Vector{<:Real}
     C = compute_covmatrix(dθ)
     λ, W = eigen(C)
     idx = sortperm(λ, rev=true)
-    λ, W = λ[idx], W[:,idx] # reorder
+    λ, W = λ[idx], W[idx,:] # reorder
+    for i = 1:length(λ)
+        if W[1,i] < 0; W[:,i] = -W[:,i]; end
+    end
     return C, λ, W
 end
 
@@ -103,8 +106,61 @@ Computes eigendecomposition of provided covariance matrix.
 function compute_eigenbasis(C::Matrix{T}) where T <: Real
     λ, W = eigen(C)
     idx = sortperm(λ, rev=true)
-    λ, W = λ[idx], W[:,idx] # reorder
+    λ, W = λ[idx], W[idx,:] # reorder
+    for i = 1:length(λ)
+        if W[1,i] < 0; W[:,i] = -W[:,i]; end
+    end
     return C, λ, W
+end
+
+
+"""
+function find_subspaces(λ::Vector{T}, W::Matrix{T}, tol::Float64) where T <: Real
+
+Partitions active and inactive subspaces. The partition point is determined by the tol parameter, which is the percent of residual variance.
+Example: set tol=0.05 to compute subspace explaining 95% of variance in the QoI. 
+
+# Arguments
+- `λ :: Vector{T}`                       : eigenvalues of d-by-d matrix
+- `W :: Matrix{T}`                       : eigenvectors of d-by-d matrix
+- `tol :: Float64`                       : tolerance representing cutoff percent of residual variance
+
+# Outputs 
+- `W1 :: Matrix{T}`                      : active subspace (d-by-r matrix)
+- `W2 :: Matrix{T}`                      : inactive subspace (d-by-(d-r) matrix)
+
+""" 
+function find_subspaces(λ::Vector{T}, W::Matrix{T}, tol::Float64) where T <: Real
+    Σ = 1.0 .- cumsum(λ) / sum(λ)
+    id = findall(x -> x .> tol, Σ)[end]
+    W1 = W[:, 1:id] # active subspace
+    W2 = W[:, id+1:end]  # inactive subspace
+
+    return W1, W2
+end
+
+
+"""
+function find_subspaces(W::Matrix{T}, ρθ::Distribution, tol::Int64) where T <: Real
+
+Partitions active and inactive subspaces. The dimension of the active subspace is specified by the tol parameter. 
+
+# Arguments
+- `λ :: Vector{T}`                       : eigenvalues of d-by-d matrix
+- `W :: Matrix{T}`                       : eigenvectors of d-by-d matrix
+- `ρθ :: Distribution`                   : sampling density for the parameter θ
+- `tol :: Int64`                         : cutoff dimension of active subspace (r)
+
+# Outputs 
+- `W1 :: Matrix{T}`                      : active subspace (d-by-r matrix)
+- `W2 :: Matrix{T}`                      : inactive subspace (d-by-(d-r) matrix)
+
+""" 
+function find_subspaces(λ::Vector{T}, W::Matrix{T}, tol::Int64) where T <: Real
+    W1 = W[:, 1:tol] # active subspace
+    W2 = W[:, tol+1:end] # inactive subspace
+
+    return W1, W2
 end
 
 
@@ -118,72 +174,34 @@ Computes marginal density of the active/inactive variable, given a multivariate 
 - `ρθ :: MvNormal`                       : sampling density for the parameter θ
 
 # Outputs 
-- `πsub :: Distribution`                 : marginal density of active/inactive variable
+- `πsub :: MvNormal`                     : marginal density of active/inactive variable
 
 """ 
 function compute_marginal(Wsub::Matrix{T}, ρθ::MvNormal) where T <: Real
     μsub = Wsub' * ρθ.μ
-    Σsub = Wsub' * ρθ.Σ * Wsub
+    Σsub = Hermitian(Wsub' * ρθ.Σ * Wsub)
     πsub = MvNormal(μsub, Σsub)
     return πsub
 end
 
 
 """
-function find_subspaces(W::Matrix{T}, ρθ::Distribution, tol::Float64, λ::Vector{T}) where T <: Real
+function compute_as(dθ::Vector{T}, ρθ::Distribution, tol::Real) where T <: Vector{<:Real}
 
-Partitions active and inactive subspaces. The partition point is determined by the tol parameter, which is the percent of residual variance.
-Example: set tol=0.05 to compute subspace explaining 95% of variance in the QoI. 
-
-# Arguments
-- `W :: Matrix{T}`                       : eigenvectors of d-by-d matrix
-- `ρθ :: Distribution`                   : sampling density for the parameter θ
-- `tol :: Float64`                       : tolerance representing cutoff percent of residual variance
-- `λ :: Vector{T}`                       : eigenvalues of d-by-d matrix
-
-# Outputs 
-- `W1 :: Matrix{T}`                      : active subspace (d-by-r matrix)
-- `W2 :: Matrix{T}`                      : inactive subspace (d-by-(d-r) matrix)
-- `π_y :: Distribution`                  : marginal density of active variable y
-- `π_z :: Distribution`                  : marginal density of inactive variable z 
-
-""" 
-function find_subspaces(W::Matrix{T}, ρθ::Distribution, tol::Float64, λ::Vector{T}) where T <: Real
-    Σ = 1.0 .- cumsum(λ) / sum(λ)
-    id = findall(x -> x .> tol, Σ)[end]
-    W1 = W[:, 1:id] # active subspace
-    W2 = W[:, id+1:end]  # inactive subspace
-
-    # sampling density of active variable y
-    π_y = compute_marginal(W1, ρθ)
-
-    # sampling density of inactive variable z
-    π_z = compute_marginal(W2, ρθ)
-
-    return W1, W2, π_y, π_z
-end
-
-
-"""
-function find_subspaces(W::Matrix{T}, ρθ::Distribution, tol::Int64) where T <: Real
-
-Partitions active and inactive subspaces. The dimension of the active subspace is specified by the tol parameter. 
+Computes the active subspace from a set of feature vectors, their sampling density, and tolerance parameter. 
 
 # Arguments
-- `W :: Matrix{T}`                       : eigenvectors of d-by-d matrix
+- `dθ :: Vector{T}`                      : samples of feature vector
 - `ρθ :: Distribution`                   : sampling density for the parameter θ
-- `tol :: Int64`                         : cutoff dimension of active subspace (r)
+- `tol :: Real`                          : tolerance to determine active dimension r
 
 # Outputs 
-- `W1 :: Matrix{T}`                      : active subspace (d-by-r matrix)
-- `W2 :: Matrix{T}`                      : inactive subspace (d-by-(d-r) matrix)
-- `π_y :: Distribution`                  : marginal density of active variable y
-- `π_z :: Distribution`                  : marginal density of inactive variable z 
+- `as :: Subspace`                       : struct containing W1, W2, π_y, π_z  
 
 """ 
-function find_subspaces(W::Matrix{T}, ρθ::Distribution, tol::Int64) where T <: Real
-    W1 = W[:, 1:tol] # active subspace
-    W2 = W[:, tol+1:end] # inactive subspace
+function compute_as(dθ::Vector{T}, ρθ::Distribution, tol::Real) where T <: Vector{<:Real}
+    C, λ, W = compute_eigenbasis(dθ)
+    W1, W2 = find_subspaces(λ, W, tol)
 
     # sampling density of active variable y
     π_y = compute_marginal(W1, ρθ)
@@ -192,49 +210,35 @@ function find_subspaces(W::Matrix{T}, ρθ::Distribution, tol::Int64) where T <:
     π_z = compute_marginal(W2, ρθ)
 
     # save in struct
-    return W1, W2, π_y, π_z
-end
-
-
-"""
-function compute_as(dθ::Vector{T}, ρθ::Distribution, tol::Float64) where T <: Vector{<:Real}
-
-Computes the active subspace from a set of feature vectors, their sampling density, and tolerance parameter. 
-
-# Arguments
-- `dθ :: Vector{T}`                      : samples of feature vector
-- `ρθ :: Distribution`                   : sampling density for the parameter θ
-- `tol :: Float64`                       : tolerance representing cutoff percent of residual variance
-
-# Outputs 
-- `as :: Subspace`                       : struct containing W1, W2, π_y, π_z  
-
-""" 
-function compute_as(dθ::Vector{T}, ρθ::Distribution, tol::Float64) where T <: Vector{<:Real}
-    C, λ, W = compute_eigenbasis(dθ)
-    W1, W2, π_y, π_z = find_subspaces(W, ρθ, tol, λ)
     as = Subspace(C, λ, W1, W2, π_y, π_z)
     return as
 end
 
 
 """
-function compute_as(dθ::Vector{T}, ρθ::Distribution, tol::Int64) where T <: Vector{<:Real}
+function compute_as(C::Matrix{T}, ρθ::Distribution, tol::Real) where T <: Real
 
 Computes the active subspace from a set of feature vectors, their sampling density, and tolerance parameter. 
 
 # Arguments
-- `dθ :: Vector{T}`                      : samples of feature vector
+- `C :: Matrix{T}`                       : covariance matrix
 - `ρθ :: Distribution`                   : sampling density for the parameter θ
-- `tol :: Int64`                         : cutoff dimension of active subspace (r)
+- `tol :: Real`                          : tolerance to determine active dimension r
 
 # Outputs 
 - `as :: Subspace`                       : struct containing W1, W2, π_y, π_z  
 
 """ 
-function compute_as(dθ::Vector{T}, ρθ::Distribution, tol::Int64) where T <: Vector{<:Real}
-    C, λ, W = compute_eigenbasis(dθ)
-    W1, W2, π_y, π_z = find_subspaces(W, ρθ, tol)
+function compute_as(C::Matrix{T}, ρθ::Distribution, tol::Real) where T <: Real
+    _, λ, W = compute_eigenbasis(C)
+    W1, W2 = find_subspaces(λ, W, tol)
+
+    # sampling density of active variable y
+    π_y = compute_marginal(W1, ρθ)
+
+    # sampling density of inactive variable z
+    π_z = compute_marginal(W2, ρθ)
+
     as = Subspace(C, λ, W1, W2, π_y, π_z)
     return as
 end
@@ -243,7 +247,7 @@ end
 """
 function sample_as(n::Int64, as::Subspace)
 
-Samples from the active subspace by fixing inactive variables at nominal (mean) value.
+Draws random samples from the active subspace.
 
 # Arguments
 - `n :: Int64`                           : number of samples
@@ -256,9 +260,52 @@ Samples from the active subspace by fixing inactive variables at nominal (mean) 
 """ 
 function sample_as(n::Int64, as::Subspace)
     ysamp = [rand(as.π_y) for i = 1:n] # sample active variable
-    μz = as.π_z.μ # fix inactive variable
-    θsamp = [as.W1*y + as.W2*μz for y in ysamp] # compute corresponding θ
+    θsamp = transf_to_paramspace_fix.(ysamp, (as,))
     return ysamp, θsamp
+end
+
+
+"""
+function transf_to_paramspace_fix(y::Vector, as::Subspace)
+
+Transforms a sample from the active subspace (y) to the original parameter space (θ), fixing the inactive variable at the nominal (mean) value.
+
+# Arguments
+- `y :: Float or Vector`                 : sample from the active subspace
+- `as :: Subspace`                       : struct containing W1, W2, π_y, π_z  
+
+# Outputs 
+- `θ :: Vector`                          : sample transformed to the original parameter space 
+
+""" 
+function transf_to_paramspace_fix(y::Float64, as::Subspace)
+    y = [y]
+    θ = as.W1*y + as.W2*as.π_z.μ
+    return θ
+end
+
+function transf_to_paramspace_fix(y::Vector, as::Subspace)
+    θ = as.W1*y + as.W2*as.π_z.μ
+    return θ
+end
+
+
+"""
+function transf_to_subspace(θ::Vector, as::Subspace)
+
+Transforms a sample from the original parameter space (θ) to the active subspace (y).
+
+# Arguments
+- `θ :: Vector`                          : sample from the original parameter space 
+- `as :: Subspace`                       : struct containing W1, W2, π_y, π_z  
+
+# Outputs 
+- `y :: Float or Vector`                 : sample transformed to the active subspace
+
+""" 
+function transf_to_subspace(θ::Vector, as::Subspace)
+    y = as.W1'*θ
+    return y
 end
 
 
@@ -281,4 +328,4 @@ Samples from the active subspace by marginalization over inactive variables.
 # end
 
 
-export Subspace, compute_covmatrix, compute_eigenbasis, find_subspaces, compute_as, sample_as
+export Subspace, compute_covmatrix, compute_eigenbasis, find_subspaces, compute_as, sample_as, transf_to_paramspace_fix, transf_to_subspace

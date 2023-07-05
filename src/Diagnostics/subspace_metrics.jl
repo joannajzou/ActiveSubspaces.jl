@@ -36,12 +36,14 @@ Computes weighted subspace distance between r-dimensional subspaces of covarianc
 function WeightedSubspaceDistance(A::Matrix, B::Matrix, rA::Int64; rB::Int64=rA)
     
     # compute subspace of A
-    γA, ψA = compute_subspace(A, rA)
-    DA = Diagonal(γA ./ sum(γA)) # diagonal matrix of weights
+    _, γA, ψA = select_eigendirections(A, rA)
+    γA = γA[1:rA]
+    DA = Diagonal(γA ./ sum(γA))^(1/4) # diagonal matrix of weights
 
     # compute subspace of B
-    γB, ψB = compute_subspace(B, rB)
-    DB = Diagonal(γB ./ sum(γB)) # diagonal matrix of weights
+    _, γB, ψB = select_eigendirections(B, rB)
+    γB = γB[1:rB]
+    DB = Diagonal(γB ./ sum(γB))^(1/4) # diagonal matrix of weights
 
     return sqrt( 1 - norm( (ψA * DA)' * (ψB * DB) )^2 )
 
