@@ -76,10 +76,12 @@ function run_md(Tend::Int, file_dir::String, save_dir::String; seed = 1, Temp = 
 
             command(lmp, "compute pe all pe")                       # potential energy
             command(lmp, "fix fpe all ave/time 1 $dT $dT c_pe file $(save_dir)tmp.pe")
+            # command(lmp, "compute pea all pe/atom")                       # potential energy
             
             command(lmp, "compute msd all msd com yes")
             command(lmp, "fix fmsd all ave/time 1 $dT $dT c_msd[4] file $(save_dir)tmp.msd")
-            
+            # command(lmp, "compute disp all displace/atom")
+
             command(lmp, "thermo $dT")
             command(lmp, "fix l0 all nve langevin $Temp $Temp 1 $seed")
 

@@ -1,4 +1,5 @@
 using CairoMakie
+using Colors
 
 function plot_energy(e_pred::Vector{Float64}, e_true)
     r0 = minimum(e_true); r1 = maximum(e_true); rs = (r1-r0)/10
@@ -51,7 +52,7 @@ function plot_eigenspectrum(λ::Vector{Float64})
     ax = Axis(fig[1,1],
             title="Spectrum of gradient covariance matrix C",
             xlabel="index i",
-            ylabel="eigenvalue (λ_i)",
+            ylabel="eigenvalue (λi)",
             yscale=log10,
             xgridvisible=false,
             ygridvisible=false)
@@ -90,4 +91,39 @@ function plot_cosine_sim(W::Vector{T}) where T <: Matrix{<:Real}
     
     scatterlines!(ax, 1:d, cs)
     return fig
+end
+
+function plot_wsd(Cref::Matrix{Float64}, C::Matrix{Float64})
+    dim = size(Cref, 1)
+    wsd_vec = [WeightedSubspaceDistance(Cref, C, r) for r = 1:dim]
+    
+    fig = Figure(resolution=(600,600))
+    ax = Axis(fig[1,1],
+            title="Weighted subspace distance",
+            xlabel="dimension (r)",
+            ylabel="WSD(r)",
+            # yscale=log10
+            )
+
+    scatterlines!(ax, 1:dim, wsd_vec)
+    return fig, wsd_vec
+end
+
+
+function plot_cossim(Cref::Matrix{Float64}, C::Matrix{Float64})
+    dim = size(Cref, 1)
+    _, _, Wref = compute_eigenbasis(Cref)
+    _, _, W = compute_eigenbasis(C)
+    
+    cossim = [Wref[:,i]'*W[:,i] for i = 1:dim]
+    fig = Figure(resolution=(600,600))
+    ax = Axis(fig[1,1],
+            title="Cosine similarity",
+            xlabel="eigenvector (ϕi)",
+            ylabel="cos. sim.",
+            # yscale=log10
+            )
+
+    scatterlines!(ax, 1:dim, cossim)
+    return fig, cossim
 end
