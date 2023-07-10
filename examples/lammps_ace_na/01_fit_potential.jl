@@ -36,33 +36,33 @@ end
 
 # compute posterior on ACE parameters #################################################################
 # load dataset
-confs, _ = load_data("data/lj-ar.yaml", YAML(:Ar, u"eV", u"Å"))
+# Load dataset
+confs, thermo = load_data("data/liquify_sodium.yaml", YAML(:Na, u"eV", u"Å"))
+confs, thermo = confs[220:end], thermo[220:end]
 
-# Define ACE basis
-ace = ACE(species = [:Ar],         # species
-          body_order = 2,          # 2-body
+# Split dataset
+conf_train, conf_test = confs[1:1000], confs[1001:end]
+
+# Define ACE
+ace = ACE(species = [:Na],         # species
+          body_order = 4,          # 4-body
           polynomial_degree = 8,   # 8 degree polynomials
           wL = 1.0,                # Defaults, See ACE.jl documentation 
           csp = 1.0,               # Defaults, See ACE.jl documentation 
           r0 = 1.0,                # minimum distance between atoms
-          rcutoff = 4.0)           # cutoff radius 
+          rcutoff = 5.0)           # cutoff radius 
 
-# Update dataset by adding energy (local) descriptors
-println("Computing local descriptors")
-e_descr = compute_local_descriptors(confs, ace)
-ds = DataSet(confs .+ e_descr)
+# Update training dataset by adding energy (local) descriptors
+println("Computing local descriptors of training dataset")
+e_descr_train = compute_local_descriptors(conf_train, ace)
+#e_descr_train = JLD.load("data/sodium_empirical_full.jld", "descriptors")
+ds_train = DataSet(conf_train .+ e_descr_train)
 
-# Split dataset
-ds_train, ds_test = ds[1:5000], ds[5001:end]
-
-# learn using DPP samples
+# Learn, using DPP
 lb = LBasisPotential(ace)
-dpp = kDPP(ds_train, GlobalMean(), DotProduct(); batch_size = 20)
+dpp = kDPP(ds_train, GlobalMean(), DotProduct(); batch_size = 200)
 dpp_inds = get_random_subset(dpp)
 lb, Σ = learn!(lb, ds_train[dpp_inds]; α = 1e-6)
-
-e_descr_train = sum.(get_values.(get_local_descriptors.(ds_train[dpp_inds])))
-e_descr_test = sum.(get_values.(get_local_descriptors.(ds_test)))
 
 
 
