@@ -4,7 +4,7 @@ import Base: minimum, maximum, rand, @kwdef
 import StatsBase: params
 
 
-@kwdef mutable struct Gibbs <: Distribution{Univariate,Continuous}
+@kwdef mutable struct Gibbs <: Distribution{Union{Univariate,Multivariate}, Continuous}
     V :: Function                                           # potential function with inputs (x,θ)
     ∇xV :: Function                                         # gradient of potential wrt x
     ∇θV :: Function                                         # gradient of potential wrt θ
@@ -52,22 +52,25 @@ end
 params(d::Gibbs) = (d.β, d.θ)
 
 # 1 - random sampler
-rand(d::Gibbs, n::Int, sampler::Sampler, ρ0::Distribution) = sample(d.V, d.∇xV, sampler, n, rand(ρ0))
+function rand(d::Gibbs, n::Int, sampler::Sampler, ρ0::Distribution; burn=0.1)
+    nsim = Int(ceil((1+burn) * n))
+    xsamp = sample(d.V, d.∇xV, sampler, nsim, rand(ρ0))
+    return xsamp[1:n]
+end
 
 # 2 - unnormalized pdf
 updf(d::Gibbs, x) = exp(d.β * d.V(x))
 
 # 3 - normalization constant (partition function)
 function normconst(d::Gibbs, ξ::Vector, w::Vector)
-    return sum(w' * updf.(d, ξ))
+    return sum(w' * updf.((d,), ξ))
 end
 
 # 4 - log unnormalized pdf
 logupdf(d::Gibbs, x) = d.β * d.V(x)
 
 # 5 - gradlogpdf (wrt x)
-gradlogpdf(d::Gibbs, x::Real) = d.β * d.∇xV(x)
-gradlogpdf(d::Gibbs, x::Vector) = d.β * d.∇xV(x)
+gradlogpdf(d::Gibbs, x) = d.β * d.∇xV(x)
 
 # 6 - minimum
 minimum(d::Gibbs) = -Inf

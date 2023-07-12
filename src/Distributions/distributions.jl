@@ -1,5 +1,5 @@
 include("gibbs.jl")
-
+include("mixture.jl")
 
 """
 function hasupdf(d::Distribution)
@@ -14,6 +14,10 @@ Returns 'true' if distribution d has an unnormalized pdf function (updf(), logup
 
 """
 function hasupdf(d::Gibbs)
+    return true
+end
+
+function hasupdf(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs})
     return true
 end
 
