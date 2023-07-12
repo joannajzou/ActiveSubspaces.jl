@@ -1,4 +1,4 @@
-using StatsBase
+using CairoMakie, Colors
 
 
 custom_theme = Theme(
@@ -10,10 +10,26 @@ custom_theme = Theme(
     )
 )
 
+function plot_pdf_with_sample_hist(d::Distribution, xplot::Vector{T}, xsamp::Vector{T}; ξx=:none, wx=:none) where T <: Real
+    with_theme(custom_theme) do
+        fig = Figure(resolution = (700, 600))
+        ax = Axis(fig[1, 1], xlabel="x", ylabel="pdf(x)", title="Comparison of distribution and samples")
+        if hasupdf(d) == true
+            lines!(ax, xplot, updf.((d,), xplot) ./ normconst(d, ξx, wx), label="true dist.")
+            hist!(ax, xsamp, color=(:blue, 0.2), normalization=:pdf, bins=50, label="samples")
+        else
+            lines!(ax, xplot, pdf.(d, xplot), label="true dist.")
+            hist!(ax, xsamp, color=(:blue, 0.2), normalization=:pdf, bins=50, label="samples")
+        end
+        
+        return fig
+    end
+end
+
 function plot_parameter_space(θ1rng::Vector, θ2rng::Vector, Q::Matrix, P::Matrix, θsamp::Matrix, θysamp::Matrix)
     with_theme(custom_theme) do
         fig = Figure(resolution = (700, 600))
-        ax1 = Axis(fig[1, 1][1, 1],  xlabel="θ₁", ylabel="θ₂", title="Parameter space")
+        ax1 = Axis(fig[1, 1][1, 1], xlabel="θ₁", ylabel="θ₂", title="Parameter space")
         # QoI distribution
         hm = heatmap!(ax1, θ1rng, θ2rng, Q) 
         # contours of ρ(θ)

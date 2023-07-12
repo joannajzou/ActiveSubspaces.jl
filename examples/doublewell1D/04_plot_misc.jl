@@ -1,8 +1,8 @@
 using ActiveSubspaces
 using Distributions
 using LinearAlgebra
+using StatsBase
 using JLD
-using CairoMakie
 
 # select model
 modnum = 1
