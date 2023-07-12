@@ -30,7 +30,7 @@ end
 
 
 # compute energy with MD #############################################################################
-nsamp = 2000                # number of coefficient samples
+nsamp = 2000            # number of coefficient samples
 Temp = 0.6*120          # temperature
 βsamp = [rand(πβ) for i = 1:nsamp]
 JLD.save("$(simdir)coeff_samples.jld",

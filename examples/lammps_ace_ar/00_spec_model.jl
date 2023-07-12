@@ -6,7 +6,7 @@ using InteratomicPotentials
 using InteratomicBasisPotentials
 using PotentialLearning
 using LinearAlgebra
-using ACE1, ACE1pack, JuLIP
+using JuLIP, ACE1, ACE1pack
 using Distributions
 using JLD
 
