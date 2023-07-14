@@ -15,10 +15,10 @@ include("qoi_meanenergy.jl")
 include("mc_utils.jl")
 
 
-
 # specify sample sizes and number of replications for simulation ##################################
 nsamp_arr = [1000, 2000, 4000, 8000, 16000]     # sample sizes
-nrepl = 10                                      # number of replications per sample size
+nrepl = 1                                       # number of replications per sample size
+        
 
 
 # compute reference covariance matrix ############################################################
@@ -87,6 +87,7 @@ for j = 1:nrepl
         metrics_g[βi] = metrics_gi
         println("IS MC Gibbs (β=$βi): $t sec.")
     end
+
 
     JLD.save("data$modnum/repl$j/DW1D_ISG_nsamp=$(nsamptot).jld",
         "nx", nMC,

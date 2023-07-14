@@ -38,7 +38,7 @@ for j = 1:nrepl
     # θsamp = [rand(ρθ) for i = 1:nsamptot]   
     # θsamp = remove_outliers(θsamp)
     # nsamp_arr[end] = length(θsamp)
-    θsamp = JLD.load("data$modnum/repl$j/DW1D_ISU_nsamp=$(nsamptot).jld")["metrics"]["θsamp"]
+    θsamp = JLD.load("data$modnum/repl$j/DW1D_ISU_nsamp=16000.jld")["metrics"]["θsamp"]
 
 
     
@@ -77,7 +77,7 @@ for j = 1:nrepl
 
         ISint = ISSamples(mm, xsamp)
 
-        t = @elapsed ∇Qis_i, metrics_i = compute_gradQ(θsamp, q, ISint; gradh=∇h)
+        t = @elapsed ∇Qis_i, metrics_i = compute_gradQ(θsamp[1:nsamptot], q, ISint; gradh=∇h)
         CIS[ncent] = compute_covmatrix(∇Qis_i, nsamp_arr)
         metrics[ncent] = metrics_i
         println("IS MC Mixture (ncent=$ncent): $t sec.")
