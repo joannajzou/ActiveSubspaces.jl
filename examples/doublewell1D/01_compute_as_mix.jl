@@ -19,7 +19,7 @@ include("mc_utils.jl")
 
 # specify sample sizes and number of replications for simulation ##################################
 nsamp_arr = [1000, 2000, 4000, 8000, 16000]     # sample sizes
-nrepl = 4                                              # number of replications per sample size
+nrepl = 1                                       # number of replications per sample size
         
 
 
@@ -47,7 +47,7 @@ for j = 1:nrepl
     CIS = Dict{Float64, Dict}()
     metrics = Dict{Float64, Dict}()
     
-    ncent_arr = [5, 9, 16]
+    ncent_arr = [5] # , 9, 16]
     for ncent in ncent_arr
         # select centers of proposal PDFs
         dc = Int(ceil(sqrt(ncent)))
