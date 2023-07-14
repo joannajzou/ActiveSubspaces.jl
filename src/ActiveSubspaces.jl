@@ -15,27 +15,36 @@ using LinearAlgebra
 using Random
 using Statistics
 using StatsBase
+using StatsFuns
 using Distributions
 using FastGaussQuadrature
 using ForwardDiff
 using AdvancedHMC
+using PotentialLearning
 using InvertedIndices
 using JLD
 
 
-# call on src scripts
+# functions for standardizing input variables 
+include("DataProcessing/dataprocessing.jl")
+
+# functions for MCMC sampling from distributions
 include("Sampling/sampling.jl")
 
+# functions for defining generic distributions
 include("Distributions/distributions.jl")
 
+# functions for defining integration method and parameters
 include("Integrators/integrators.jl")
 
+# functions for computing expectations (QoIs)
 include("QoI/qoi.jl")
 
+# functions for computing the active subspace
 include("Subspaces/subspaces.jl")
 
+# functions for computing error/diagnostic metrics
 include("Diagnostics/diagnostics.jl")
-
 
 
 
