@@ -13,10 +13,10 @@ Defines the struct containing variables of the active subspace.
 
 """
 struct Subspace
-    C :: Matrix{Real}           
-    λ :: Vector{Real}          
-    W1 :: Matrix{Real}         
-    W2 :: Matrix{Real}         
+    C :: Matrix{<:Real}           
+    λ :: Vector{<:Real}          
+    W1 :: Matrix{<:Real}         
+    W2 :: Matrix{<:Real}         
     π_y :: Distribution     
     π_z :: Distribution  
 end
@@ -81,7 +81,7 @@ function compute_eigenbasis(dθ::Vector{T}) where T <: Vector{<:Real}
     C = compute_covmatrix(dθ)
     λ, W = eigen(C)
     idx = sortperm(λ, rev=true)
-    λ, W = λ[idx], W[idx,:] # reorder
+    λ, W = λ[idx], W[:,idx] # reorder
     for i = 1:length(λ)
         if W[1,i] < 0; W[:,i] = -W[:,i]; end
     end
@@ -106,7 +106,7 @@ Computes eigendecomposition of provided covariance matrix.
 function compute_eigenbasis(C::Matrix{T}) where T <: Real
     λ, W = eigen(C)
     idx = sortperm(λ, rev=true)
-    λ, W = λ[idx], W[idx,:] # reorder
+    λ, W = λ[idx], W[:,idx] # reorder
     for i = 1:length(λ)
         if W[1,i] < 0; W[:,i] = -W[:,i]; end
     end
@@ -278,15 +278,14 @@ Transforms a sample from the active subspace (y) to the original parameter space
 - `θ :: Vector`                          : sample transformed to the original parameter space 
 
 """ 
-function transf_to_paramspace_fix(y::Float64, as::Subspace)
-    y = [y]
+function transf_to_paramspace_fix(y::Vector, as::Subspace)
     θ = as.W1*y + as.W2*as.π_z.μ
     return θ
 end
 
-function transf_to_paramspace_fix(y::Vector, as::Subspace)
-    θ = as.W1*y + as.W2*as.π_z.μ
-    return θ
+function transf_to_paramspace_fix(y::Float64, as::Subspace)
+    y = [y]
+    return transf_to_paramspace_fix(y, as)
 end
 
 
