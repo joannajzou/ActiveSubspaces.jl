@@ -38,7 +38,7 @@ JLD.save("$(simdir)coeff_samples.jld",
 
 
 # compute at mean/nominal get_values
-run_md_ar("nom", simdir, πβ.μ, 0.7*120)
+run_md_ar("nom", simdir, πβ.μ, 0.6*120)
 
 
 # iterate over coefficient samples
@@ -49,6 +49,9 @@ for coeff = 1:nsamp
         println("WARN: run $coeff failed, skipped")
     end
 end
+
+
+
 
 
 

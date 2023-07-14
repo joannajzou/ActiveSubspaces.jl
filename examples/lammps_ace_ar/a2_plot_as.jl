@@ -1,7 +1,6 @@
 include("00_spec_model.jl")
 include("qoi_meanenergy.jl")
 include("mc_utils.jl")
-include("molecular_plot_utils.jl")
 include("plotting_utils.jl")
 
 using DelimitedFiles
@@ -28,32 +27,48 @@ idkeep = symdiff(1:nsamp, idskip)
 ∇Qmc = [JLD.load("$(simdir)coeff_$j/gradQ_meanenergy.jld")["∇Q"] for j in idkeep]
 
 # load IS estimates
-∇Qis = JLD.load("$(simdir)gradQ_meanenergy_IS_all_84.jld")["∇Q"]
-metrics = JLD.load("$(simdir)metrics_84.jld")["metrics"]
+∇Qis_e = JLD.load("$(simdir)gradQ_meanenergy_IS_all_mix_equalwts.jld")["∇Q"]
+metrics_e = JLD.load("$(simdir)metrics_mix_equalwts.jld")["metrics"]
 
+∇Qis_v = JLD.load("$(simdir)gradQ_meanenergy_IS_all_mix_varwts.jld")["∇Q"]
+metrics_v = JLD.load("$(simdir)metrics_mix_varwts.jld")["metrics"]
+
+
+# compare gradient calculations ############################################################
+
+∇Q_err_e = abs.(EuclideanDistance.(∇Qmc, ∇Qis_e))
+∇Q_err_v = abs.(EuclideanDistance.(∇Qmc, ∇Qis_v))
+
+plot_staggered_hist([∇Q_err_e, ∇Q_err_v], [0.3, 0.7], "",
+                    ["Equal mix. wts.", "Var. mix. wts."],
+                    "Error (Euclid. dist.)", "Error in estimated ∇Q"; logscl=true)
 
 
 # compute active subspace ##################################################################
-asmc = compute_as(∇Qmc, ρθ, βdim)
-
-asis = compute_as(∇Qis, ρθ, βdim)
-
+asmc = compute_as(∇Qmc, πβ, βdim)
+asisE = compute_as(∇Qis_e, πβ, βdim)
+asisV = compute_as(∇Qis_v, πβ, βdim)
 
 
 # compare subspaces ########################################################################
 with_theme(custom_theme) do
-    f1 = plot_eigenspectrum(asmc.λ)
-end
-f1 = plot_eigenspectrum([asmc.λ, asis.λ]; predlab=["MC", "IS"])
-# f1 = plot_eigenspectrum([asmc.λ ./ maximum(asmc.λ), asis.λ ./ maximum(asis.λ) ]; predlab=["MC", "IS"])
-f2, wsd = plot_wsd(asmc.C, asis.C)
-f3, cossim = plot_cossim(asmc.C, asis.C)
+    # f1 = plot_eigenspectrum(asmc.λ)
+    λE = reduce(vcat, (asisE.λ[1:6], asisE.λ[6]*ones(2)))
+    λV = reduce(vcat, (asisV.λ[1:6], asisV.λ[6]*ones(2)))
 
+    f1 = plot_eigenspectrum([asmc.λ, λE, λV]; predlab=["MC", "IS (equal mix.)", "IS (var. mix.)"])
+end
+# f1 = plot_eigenspectrum([asmc.λ ./ maximum(asmc.λ), asis.λ ./ maximum(asis.λ) ]; predlab=["MC", "IS"])
+f2, wsd = plot_wsd(asmc.C, asisE.C, asisV.C)
+
+with_theme(custom_theme) do
+    f3 = plot_cossim(asmc.C, (asisE.C, asisV.C), ("Equal mix. wts.", "Var. mix. wts."))
+end
 
 # check IS diagnostics #####################################################################
-# remove NaN values
-id1 = findall(x -> isnan(x), metrics["wvar"])
-id2 = findall(x -> isnan(x), metrics["wESS"])
+# check for nan values
+id1 = findall(x -> isnan(x), metrics_v["wvar"])
+id2 = findall(x -> isnan(x), metrics_v["wESS"])
 id = union(id1, id2)
 metrics_2 = Dict{String, Vector}()
 for k in collect(keys(metrics))
@@ -61,24 +76,23 @@ for k in collect(keys(metrics))
 end
 
 # transform samples into 2D
-_, asis.λ, Wis = select_eigendirections(asis.C, 2)
-θsamp = metrics_2["θsamp"]
-ysamp = (Wis',) .* θsamp
-ymat = reduce(hcat, ysamp)
+asisE = compute_as(∇Qis_e, πβ, 2)
+asisV = compute_as(∇Qis_v, πβ, 2)
+θsamp = metrics_e["θsamp"]
 
-met_types = ["wvar", "wESS"]
-met_ttl = ["Var(w)", "ESS(w)"]
-nmet = 2
-
-# plot diagnostic value vs. parameter value
-fig = Figure(resolution=(550*nmet, 500))
-ax = Vector{Axis}(undef, nmet)
-for (i, met) in zip(1:nmet, met_types)
-    ax[i] = Axis(fig[1,i], xlabel="y_1", ylabel="y_2", title=met_ttl[i])
-    sc = scatter!(ax[i], ymat[1,:], ymat[2,:], markersize=7, color=metrics_2[met]) # colormap=Reverse(:Blues)) 
-    # Colorbar(fig[1,i][1,2], sc)
+with_theme(custom_theme) do
+    f4 = plot_IS_diag_2D_AS(asisE.C, πβ, θsamp, (log.(metrics_e["wvar"]), log.(metrics_v["wvar"])), ("log Var(w) (equal wts.)", "log Var(w) (var. wts.)"))
 end
-fig
+
+with_theme(custom_theme) do
+    f5 = plot_IS_diag_2D_AS(asisE.C, πβ, θsamp, (log.(metrics_e["wESS"]), log.(metrics_v["wESS"])), ("log ESS(w) (equal wts.)", "log ESS(w) (var. wts.)"))
+end
+
+with_theme(custom_theme) do
+    f6 = plot_IS_diag_2D_AS(asisE.C, πβ, θsamp, (metrics_e["wESS"], metrics_v["wESS"]), ("ESS(w) (equal wts.)", "ESS(w) (var. wts.)"))
+end
+
+    
 
 # plot samples with high/low diagnostic values #####################################################################
 # Define 2D points
@@ -93,11 +107,16 @@ B = [sum(compute_local_descriptors(sys, ace)) for sys in system]
 energies_pred = [Bi' * βi for Bi in B, βi in βsamp]
 energies_mean = [Bi' * πβ.μ for Bi in B]
 
+
+met_types = ["wvar", "wESS"]
+met_ttl = ["Var(w)", "ESS(w)"]
+nmet = 2
+
 fig = Figure(resolution=(1100, 500))
 ax = Vector{Axis}(undef, nmet)
 for (i, met) in zip(1:nmet, met_types)
     ax[i] = Axis(fig[1,i], xlabel="r (Å)", ylabel="E (eV)", title=met_ttl[i])
-    sortid = sortperm(metrics[met], rev=true) # descending order 
+    sortid = sortperm(metrics_e[met], rev=true) # descending order 
 
     hi_err_id = sortid[1:50]
     lo_err_id = sortid[end-50:end-1]
