@@ -31,7 +31,8 @@ function compute_gradQ(θsamp::Vector{Vector{Float64}}, q::GibbsQoI, integrator:
     metrics = init_metrics_dict(nsamp)
 
     for k = 1:nsamp
-        ∇Qis[k], his[k], wis[k] = grad_expectation(θsamp[k], q, integrator; gradh=gradh)
+        t = @elapsed ∇Qis[k], his[k], wis[k] = grad_expectation(θsamp[k], q, integrator; gradh=gradh)
+        println("samp $k: $t sec.")
     end
 
     nMC = length(his[1]) 

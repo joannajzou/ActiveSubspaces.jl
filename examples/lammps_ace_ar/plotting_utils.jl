@@ -1,5 +1,17 @@
 using CairoMakie
 using Colors
+using StatsBase
+
+
+custom_theme = Theme(
+    font = "/Users/joannazou/Documents/MIT/Presentations/UNCECOMP 2023/InterFont/static/Inter-Regular.ttf",
+    fontsize = 20,
+    Axis = (
+        xgridcolor = :white,
+        ygridcolor = :white,
+    )
+)
+
 
 function plot_energy(e_pred::Vector{Float64}, e_true)
     r0 = minimum(e_true); r1 = maximum(e_true); rs = (r1-r0)/10
@@ -93,7 +105,8 @@ function plot_cosine_sim(W::Vector{T}) where T <: Matrix{<:Real}
     return fig
 end
 
-function plot_wsd(Cref::Matrix{Float64}, C::Matrix{Float64})
+
+function plot_wsd(Cref::Matrix{<:Real}, C::Matrix{<:Real})
     dim = size(Cref, 1)
     wsd_vec = [WeightedSubspaceDistance(Cref, C, r) for r = 1:dim]
     
@@ -110,7 +123,7 @@ function plot_wsd(Cref::Matrix{Float64}, C::Matrix{Float64})
 end
 
 
-function plot_cossim(Cref::Matrix{Float64}, C::Matrix{Float64})
+function plot_cossim(Cref::Matrix{<:Real}, C::Matrix{<:Real})
     dim = size(Cref, 1)
     _, _, Wref = compute_eigenbasis(Cref)
     _, _, W = compute_eigenbasis(C)
@@ -120,10 +133,149 @@ function plot_cossim(Cref::Matrix{Float64}, C::Matrix{Float64})
     ax = Axis(fig[1,1],
             title="Cosine similarity",
             xlabel="eigenvector (ϕi)",
+            xticks = 1:dim,
             ylabel="cos. sim.",
             # yscale=log10
             )
 
     scatterlines!(ax, 1:dim, cossim)
     return fig, cossim
+end
+
+function plot_cossim(Cref::Matrix{<:Real}, Ctup::Tuple, labs::Tuple)
+    dim = size(Cref, 1)
+    _, _, Wref = compute_eigenbasis(Cref)
+    
+    fig = Figure(resolution=(600,600))
+    ax = Axis(fig[1,1],
+            title="Cosine similarity",
+            xlabel="eigenvector (ϕi)",
+            xticks = 1:dim,
+            ylabel="cos. sim.",
+            # yscale=log10
+            )
+
+    for (j,C) in enumerate(Ctup)
+        _, _, W = compute_eigenbasis(C)
+        cossim = [Wref[:,i]'*W[:,i] for i = 1:dim]
+        scatterlines!(ax, 1:dim, cossim, label=labs[j])
+    end
+    axislegend(ax)
+    return fig
+end
+
+
+function plot_mcmc_trace(postsamp::Matrix)
+
+    d = size(postsamp, 1)
+    if d % 2 != 0
+        d = d + 1
+        postsamp = reduce(vcat, [postsamp, zeros(size(postsamp, 2))'])
+    end
+
+
+    fig = Figure(resolution=(1800, 1000))
+    ax = Vector{Axis}(undef, d)
+
+    for i = 1:d
+        if i < d/2 + 1
+            ax[i] = Axis(fig[i,1], ylabel="state $i")
+        elseif i == Int(d/2)
+            ax[i] = Axis(fig[i,1], xlabel="step (k)", ylabel="state $i")
+        elseif i == d 
+            ax[i] = Axis(fig[i-Int(d/2),2], xlabel="step (k)", ylabel="state $i")
+        else
+            ax[i] = Axis(fig[i-Int(d/2),2], ylabel=" state $i")
+        end
+        postsamp_i = postsamp[i,:]
+        lines!(ax[i], 1:length(postsamp_i), postsamp_i)
+    end
+    fig
+end
+
+function plot_mcmc_trace(postsamp::Vector{Vector{Float64}})
+    postsamp = reduce(hcat, postsamp)
+    return plot_mcmc_trace(postsamp)
+end
+
+function plot_mcmc_autocorr(postsamp::Matrix; lags=0:1000)
+    fig = Figure(resolution=(1000, 750))
+    ax = Axis(fig[1,1], xlabel="lag (τ)", ylabel="autocorr.")
+    for i = 1:d
+        autocorr_i = autocor(postsamp[i,:], lags)
+        lines!(ax, 1:length(autocorr_i), autocorr_i, label="state $i")
+    end
+    axislegend(ax)
+    fig
+end
+
+function plot_mcmc_autocorr(postsamp::Vector{Vector{Float64}})
+    postsamp = reduce(hcat, postsamp)
+    return plot_mcmc_autocorr(postsamp)
+end
+
+
+function plot_staggered_hist(vecs::Union{Tuple,Vector}, xoff::Vector, xlab::String, xticklabs::Vector, ylab::String, ttl::String; labs=:none, logscl=false)
+    fig = Figure(resolution=(1200,600))
+
+    if logscl == false
+        ax = Axis(fig[1, 1], xticks=(xoff, xticklabs), ylabel=ylab, title=ttl)
+    else
+        # ylab = "Log " * ylab
+        ax = Axis(fig[1, 1], xticks=(xoff, xticklabs), ylabel=ylab, title=ttl, yscale=log10)
+        vecs = [abs.(v) .+ 1e-10 for v in vecs]
+    end
+
+    if labs == :none
+        [hist!(ax, v, scale_to=-0.15, color=(:blue, 0.5), offset=xoff[i], bins=100, direction=:x) for (i,v) in enumerate(vecs)]
+    else
+        [hist!(ax, v, scale_to=-0.15, color=(:blue, 0.5), offset=xoff[i], bins=100, direction=:x, label=labs[i]) for (i,v) in enumerate(vecs)]
+        axislegend(ax)
+    end
+
+    return fig
+end
+
+
+function plot_IS_diag_2D_AS(C::Matrix, π::Distribution, θsamp::Vector, met::Vector, met_ttl::String)
+    # define subspace
+    as = compute_as(C, π, 2)
+
+    # convert samples
+    ysamp = (as.W1',) .* θsamp
+    ymat = reduce(hcat, ysamp)
+
+
+    fig = Figure(resolution=(550, 500))
+    ax = Axis(fig[1,1], xlabel="y1", ylabel="y2", title=met_ttl)
+    sc = scatter!(ax, ymat[1,:], ymat[2,:], markersize=7, color=met) # colormap=Reverse(:Blues)) 
+    Colorbar(fig[1,1][1,2], sc)
+
+    return fig
+end
+
+
+function plot_IS_diag_2D_AS(C::Matrix, π::Distribution, θsamp::Vector, mettup::Tuple, met_ttl::Tuple)
+    # define subspace
+    as = compute_as(C, π, 2)
+
+    # convert samples
+    ysamp = (as.W1',) .* θsamp
+    ymat = reduce(hcat, ysamp)
+
+    # metric
+    nmet = length(mettup)
+    cmin = minimum([minimum(wi) for wi in mettup])       # minimum value for colorbar
+    cmax = maximum([maximum(wi) for wi in mettup])       # maximum value for colorbar
+
+    # plot diagnostic value vs. parameter value
+    fig = Figure(resolution=(550*nmet, 500))
+    ax = Vector{Axis}(undef, nmet)
+    for i = 1:nmet
+        ax[i] = Axis(fig[1,i], xlabel="y1", ylabel="y2", title=met_ttl[i])
+        sc = scatter!(ax[i], ymat[1,:], ymat[2,:], markersize=7, color=mettup[i], colormap=Reverse(:Blues), colorrange=(cmin,cmax)) 
+        if i == 2; Colorbar(fig[1,i][1,2], sc); end
+    end
+
+    return fig
 end
