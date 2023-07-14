@@ -12,4 +12,4 @@ function init_metrics_dict(n::Int64)
 end
 
 
-export ForstnerDistance, WeightedSubspaceDistance, EffSampleSize, ISWeightVariance, ISWeightESS, ISWeightDiagnostic, init_metrics_dict
+export ForstnerDistance, EuclideanDistance, WeightedSubspaceDistance, EffSampleSize, ISWeightVariance, ISWeightESS, ISWeightDiagnostic, init_metrics_dict
