@@ -3,7 +3,7 @@ abstract type MCIntegrator <: Integrator end
 """
 struct MonteCarlo <: MCIntegrator
 
-Defines the struct containing parameters for Monte Carlo (MC) integration using MC samples.
+Contains parameters for Monte Carlo (MC) integration using MC samples.
 This method may only be implemented when the distribution can be analytically sampled using rand().
 
 # Arguments
@@ -17,7 +17,7 @@ end
 """
 struct MCMC <: MCIntegrator
     
-Defines the struct containing parameters for Monte Carlo (MC) integration using MCMC samples.
+Contains parameters for Monte Carlo (MC) integration using MCMC samples.
 This method is implemented when the distribution cannot be analytically sampled.
 
 # Arguments
@@ -35,7 +35,7 @@ end
 """
 struct MCSamples <: MCIntegrator
 
-Defines the struct containing pre-defined Monte Carlo samples to evaluate in integration.
+Contains pre-defined Monte Carlo samples to evaluate in integration.
 This method is implemented with the user providing samples from the distribution.
 
 # Arguments

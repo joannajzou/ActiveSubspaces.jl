@@ -6,5 +6,5 @@ include("importance_sampling.jl")
 
 export Integrator
 export MCIntegrator, MonteCarlo, MCMC, MCSamples
-export ISIntegrator, ISMC, ISMCMC, ISSamples
+export ISIntegrator, ISMC, ISMCMC, ISSamples, ISMixSamples
 export QuadIntegrator, GridIntegration, GaussQuadrature, gausslegendre

@@ -1,5 +1,6 @@
 ### define mutable Mixture distribution in Distribution.jl
 import Distributions: MixtureModel
+import StatsBase: params
 using StatsFuns
 # import Base: minimum, maximum, rand
 
@@ -12,6 +13,12 @@ end
 # 0 - parameters
 # function components(d::MixtureModel) already defined
 # function probs(d::MixtureModel) already defined
+function params(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs})
+    β = [params(component(d, i))[1] for i = 1:ncomponents(d)]
+    θ = [params(component(d, i))[2] for i = 1:ncomponents(d)]
+    return (β, θ)
+end
+
 
 # 1 - random sampler
 function rand(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs}, n::Int, sampler::Sampler, ρ0::Distribution; burn=0.1)
@@ -24,6 +31,25 @@ function rand(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs}
         append!(xsamp, xi[1:ni])
     end
     return xsamp
+end 
+
+# samples provided
+function rand(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs}, n::Int, samples::Vector; wts::Vector=ones(ncomponents(d))/ncomponents(d))
+    d = MixtureModel(d, wts)
+    ntot = length(samples[1])
+    categories = StatsBase.sample(1:ncomponents(d), Weights(probs(d)), n)
+    xsamp = Vector{Float64}[]
+    catratio = Float64[]
+    for i = 1:ncomponents(d)
+        ni = length(findall(x -> x == i, categories))
+        append!(catratio, ni/n)
+        if ni != 0
+            randid = StatsBase.sample(1:ntot, ni; replace=false)
+            xi = samples[i][randid]
+            append!(xsamp, xi)
+        end
+    end
+    return xsamp, catratio
 end 
 
 # 2 - unnormalized pdf
