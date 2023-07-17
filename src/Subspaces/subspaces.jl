@@ -114,6 +114,23 @@ function compute_eigenbasis(C::Matrix{T}) where T <: Real
 end
 
 
+function compute_eigenbasis(C::Dict, nsamp_arr::Vector)
+    nrepl = length(C[nsamp_arr[1]])
+    λ = Dict{Int64, Vector}()
+    W = Dict{Int64, Vector}()
+    for nsamp in nsamp_arr
+        λ[nsamp] = Vector{Vector{Float64}}(undef, nrepl)
+        W[nsamp] = Vector{Matrix{Float64}}(undef, nrepl)
+        for j = 1:nrepl
+            _, λ[nsamp][j], W[nsamp][j] = compute_eigenbasis(C[nsamp][j])
+        end
+    end
+
+    return λ, W
+end
+
+
+
 """
 function find_subspaces(λ::Vector{T}, W::Matrix{T}, tol::Float64) where T <: Real
 

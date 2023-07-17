@@ -33,11 +33,10 @@ end
 function compute_val(Cref::Matrix{Float64}, Cdict::Dict, rdim::Int64)
     # extract values
     nsamp_arr = collect(keys(Cdict))
-    nrepl = length(Cdict[nsamp_arr[1]])
     
     # compute eigenvalues and eigenvectors
-    _, λref, _ = select_eigendirections(Cref, rdim)
-    λdict, _ = compute_eigen_(Cdict, nsamp_arr, nrepl, rdim)
+    _, λref, _ = compute_eigenbasis(Cref)
+    λdict, _ = compute_eigenbasis(Cdict, nsamp_arr)
 
     # compute validation metrics
     val = Dict{String, Dict}()
