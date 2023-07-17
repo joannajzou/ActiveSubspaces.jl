@@ -60,20 +60,34 @@ for j = 1:nrepl
         end
 
         # define mixture model
-        πc = [Gibbs(πgibbs0, β=βarr[2], θ=c) for c in centers]
+        πg = Gibbs(πgibbs0, β=βarr[2], θ=ρθ.μ)
+        πc = [Gibbs(πgibbs0, β=βarr[3], θ=c) for c in centers]
         mm = MixtureModel(πc)
 
         # sample from proposal PDF
-        xsamp = rand(mm, nMC, nuts, ρx0)
+        xsamp = rand(mm, 100000, nuts, ρx0)
 
         # check samples
         # f = plot_pdf_with_sample_hist(mm, xplot, xsamp; ξx=ξx, wx=wx)
 
         # fig = Figure(resolution = (700, 600))
-        # ax = Axis(fig[1, 1], xlabel="x", ylabel="pdf(x)", title="Comparison of distribution and samples")
-        # [lines!(ax, xplot, updf.((d,), xplot) ./ normconst(d, ξx, wx), color=:red) for d in components(mm)]
-        # lines!(ax, xplot, updf.((mm,), xplot) ./ normconst(mm, ξx, wx), label="true dist.")
-        # hist!(ax, xsamp, color=(:blue, 0.2), normalization=:pdf, bins=50, label="samples")
+        # ax = Axis(fig[1, 1], xlabel="x", ylabel="pdf(x)", title="Mixture biasing distribution")
+        # [lines!(ax, xplot, updf.((d,), xplot) ./ normconst(d, ξx, wx), color=:red, linestyle=:dash) for d in components(mm)]
+        # lines!(ax, xplot, updf.((πg,), xplot) ./ normconst(πg, ξx, wx), color=:blue, linewidth=2, label="mean")
+        # lines!(ax, xplot, updf.((mm,), xplot) ./ normconst(mm, ξx, wx), color=:black, linewidth=2, label="mixture")
+        # hist!(ax, xsamp, color=(:blue, 0.2), normalization=:pdf, bins=100, label="samples")
+        # axislegend(ax)
+        # fig
+
+        # # plot contours 
+        # θ1_rng = Vector(LinRange(2.5, 5.5, 31))
+        # θ2_rng = Vector(LinRange(2.5, 5.5, 31))
+        # P_plot = [pdf(ρθ, [θi, θj]) for θi in θ1_rng, θj in θ2_rng]
+        # fig = Figure(resolution = (600, 600))
+        # ax = Axis(fig[1, 1], xlabel="θ₁", ylabel="θ₂", title="Parameter space")
+        # contour!(ax, θ1_rng, θ2_rng, P_plot,levels=15)
+        # [scatter!(ax, c[1], c[2], color=:red) for c in centers]
+
 
         ISint = ISSamples(mm, xsamp)
 
@@ -86,7 +100,7 @@ for j = 1:nrepl
 
   
 
-    JLD.save("data$modnum/repl$j/DW1D_ISM_nsamp=$(nsamptot).jld",
+    JLD.save("data$modnum/repl$j/DW1D_ISM_nsamp=$(nsamptot)_2.jld",
         "nx", nMC,
         "ncent_arr", ncent_arr,
         "C", CIS,

@@ -20,7 +20,7 @@ include("plotting_utils.jl")
 # load data ##############################################################################
 nsamp_arr = [1000, 2000, 4000, 8000, 16000]
 nsamptot = nsamp_arr[end]
-nrepl = 10
+nrepl = 1 # 10
 d = 2
 
 ## covariance matrices
@@ -31,6 +31,7 @@ d = 2
 # Cis_g1 = import_data("data1", "ISG", nsamp_arr, nrepl, βarr[1]; nsamptot=nsamptot)
 # Cis_g2 = import_data("data1", "ISG", nsamp_arr, nrepl, βarr[2]; nsamptot=nsamptot)
 # Cis_g3 = import_data("data1", "ISG", nsamp_arr, nrepl, βarr[3]; nsamptot=nsamptot)
+Cis_m = import_data("data1", "ISM", nsamp_arr, nrepl, 5.0; nsamptot=nsamptot)
 
 # JLD.save("data1/MCcovmatrices.jld",
 #     "Cmc", Cmc,
@@ -58,7 +59,7 @@ val_u = compute_val(Cref, Cis_u, 1)
 val_g1 = compute_val(Cref, Cis_g1, 1)
 val_g2 = compute_val(Cref, Cis_g2, 1)
 val_g3 = compute_val(Cref, Cis_g3, 1)
-
+val_m = compute_val(Cref, Cis_m, 1)
 
 
 # plot error metrics ##################################################################
@@ -79,10 +80,21 @@ val_g3 = compute_val(Cref, Cis_g3, 1)
 #                 logscl=false
 # )
 
+# with_theme(custom_theme) do
+#     f3 = plot_val_metric("Forstner",
+#                     (val_mc, val_u, val_g1, val_g2, val_g3, val_m),
+#                     ("MC","IS, U[-3, 3]", "IS, Gibbs (β=0.02)", "IS, Gibbs (β=0.2)", "IS, Gibbs (β=1.0)", "IS, Mixture"),
+#                     "d(C, Ĉ)", 
+#                     "Forstner distance from reference covariance matrix",
+#                     logscl=false
+#     )
+#     f3
+# end
+
 with_theme(custom_theme) do
     f3 = plot_val_metric("Forstner",
-                    (val_mc, val_u, val_g1, val_g2, val_g3),
-                    ("MC","IS, U[-3, 3]", "IS, Gibbs (β=0.02)", "IS, Gibbs (β=0.2)", "IS, Gibbs (β=1.0)"),
+                    (val_mc, val_g2, val_g3, val_m),
+                    ("MC", "IS, Gibbs (β=0.2)", "IS, Gibbs (β=1.0)", "IS, Mixture"),
                     "d(C, Ĉ)", 
                     "Forstner distance from reference covariance matrix",
                     logscl=false
@@ -90,15 +102,16 @@ with_theme(custom_theme) do
     f3
 end
 
+
 with_theme(custom_theme) do
     f4 = plot_val_metric("WSD",
-                    (val_mc, val_u, val_g1, val_g2, val_g3),
-                    ("MC","IS, U[-3, 3]", "IS, Gibbs (β=0.02)", "IS, Gibbs (β=0.2)", "IS, Gibbs (β=1.0)"),
+                    (val_mc, val_u, val_g1, val_g2, val_g3, val_m),
+                    ("MC","IS, U[-3, 3]", "IS, Gibbs (β=0.02)", "IS, Gibbs (β=0.2)", "IS, Gibbs (β=1.0)", "IS, Mixture"),
                     "d(W₁,Ŵ₁)", 
                     "Weighted subspace distance",
                     logscl=false
         )
-    save("figures/WSD.png", f4)
+    # save("figures/WSD.png", f4)
 end
 
 
@@ -106,27 +119,32 @@ end
 # plot importance sampling diagnostics ###############################################
 metrics_u = JLD.load("data1/repl1/DW1D_ISU_nsamp=$nsamptot.jld")["metrics"]
 metrics_g = JLD.load("data1/repl1/DW1D_ISG_nsamp=$nsamptot.jld")["metrics"]
+metrics_m = JLD.load("data1/repl1/DW1D_ISM_nsamp=$nsamptot.jld")["metrics"][5.0]
 
 with_theme(custom_theme) do
     f5 = plot_IS_diagnostic("wvar", 
-                    (metrics_u, metrics_g[0.02], metrics_g[0.2], metrics_g[1.0]),
-                    ("U[-3, 3]", "Gibbs (β=0.02)", "Gibbs (β=0.2)", "Gibbs (β=1.0)"),
+                    # (metrics_u, metrics_g[0.02], metrics_g[0.2], metrics_g[1.0], metrics_m),
+                    # ("U[-3, 3]", "Gibbs (β=0.02)", "Gibbs (β=0.2)", "Gibbs (β=1.0)", "Mixture"),
+                    (metrics_g[0.2], metrics_g[1.0], metrics_m),
+                    ("Gibbs (β=0.2)", "Gibbs (β=1.0)", "Mixture"),
                     "log(Var(w))",
                     "Log variance of IS weights",
                     logscl=true
     )
-    save("figures/scatter_wvar.png", f5)
+    # save("figures/scatter_wvar.png", f5)
 end
 
 with_theme(custom_theme) do
     f6 = plot_IS_diagnostic("wESS", 
-                (metrics_u, metrics_g[0.02], metrics_g[0.2], metrics_g[1.0]),
-                ("U[-3, 3]", "Gibbs (β=0.02)", "Gibbs (β=0.2)", "Gibbs (β=1.0)"),
+                # (metrics_u, metrics_g[0.02], metrics_g[0.2], metrics_g[1.0], metrics_m),
+                # ("U[-3, 3]", "Gibbs (β=0.02)", "Gibbs (β=0.2)", "Gibbs (β=1.0)", "Mixture"),
+                (metrics_g[0.2], metrics_g[1.0], metrics_m),
+                ("Gibbs (β=0.2)", "Gibbs (β=1.0)", "Mixture"),
                 "ESS(w)/n",
                 "Normalized effective sample size (ESS)",
                 logscl=false
     )
-    save("figures/scatter_wess.png", f6)
+    # save("figures/scatter_wess.png", f6)
 end
 
 # f7 = plot_IS_diagnostic("wdiag", 
@@ -168,20 +186,20 @@ end
 # compare IS biasing distribution
 with_theme(custom_theme) do
     f12 = plot_IS_cdf("wvar",
-                    (metrics_u, metrics_g[0.02], metrics_g[0.2], metrics_g[1.0]),
-                    ("U[-3, 3]", "Gibbs (β=0.02)", "Gibbs (β=0.2)", "Gibbs (β=1.0)"),
+                    (metrics_u, metrics_g[0.02], metrics_g[0.2], metrics_g[1.0], metrics_m),
+                    ("U[-3, 3]", "Gibbs (β=0.02)", "Gibbs (β=0.2)", "Gibbs (β=1.0)", "Mixture"),
                     "P[ Var(w) > t ]",
                     "Variance of IS weights",
                     limtype=[1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3],
                     xticklab=["1e-3", "1e-2", "1e-1", "1e0", "1e1", "1e2", "1e3"],
     )
-    save("figures/cdf_wvar.png", f12)
+    # save("figures/cdf_wvar.png", f12)
 end
 
 with_theme(custom_theme) do
     f13 = plot_IS_cdf("wESS",
-                    (metrics_u, metrics_g[0.02], metrics_g[0.2], metrics_g[1.0]),
-                    ("U[-3, 3]", "Gibbs (β=0.02)", "Gibbs (β=0.2)", "Gibbs (β=1.0)"),
+                    (metrics_u, metrics_g[0.02], metrics_g[0.2], metrics_g[1.0], metrics_m),
+                    ("U[-3, 3]", "Gibbs (β=0.02)", "Gibbs (β=0.2)", "Gibbs (β=1.0)", "Mixture"),
                     "P[ ESS(w)/n < t ]",
                     "ESS of IS weights",
                     limtype = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],

@@ -5,7 +5,7 @@ using StatsBase
 using JLD
 
 # select model
-modnum = 2
+modnum = 1
 include("model_param$modnum.jl")
 
 # select qoi
