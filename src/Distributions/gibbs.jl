@@ -54,7 +54,9 @@ params(d::Gibbs) = (d.β, d.θ)
 # 1 - random sampler
 function rand(d::Gibbs, n::Int, sampler::Sampler, ρ0::Distribution; burn=0.1)
     nsim = Int(ceil((1+burn) * n))
-    xsamp = sample(d.V, d.∇xV, sampler, nsim, rand(ρ0))
+    lπ = x -> logupdf(d, x)
+    gradlπ = x -> gradlogpdf(d, x)
+    xsamp = sample(lπ, gradlπ, sampler, nsim, rand(ρ0))
     return xsamp[1:n]
 end
 
