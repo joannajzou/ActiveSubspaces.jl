@@ -14,7 +14,7 @@ Computes Forstner distance between two covariance matrices.
 - `d :: Float64`    : Forstner distance between A and B
 """
 function ForstnerDistance(A::Matrix{<:Real}, B::Matrix{<:Real}; α=1e-8) 
-    A = Hermitian(A); B = Hermitian(B)
+    A = Symmetric(A); B = Symmetric(B)
     dist = Forstner(α=α)
     return compute_distance(A, B, dist)
 end
@@ -33,7 +33,7 @@ Computes (isotropic) Euclidean distance between two covariance matrices.
 - `d :: Float64`    : Euclidean distance between A and B
 """
 function EuclideanDistance(A::Matrix{<:Real}, B::Matrix{<:Real})
-    A = Hermitian(A); B = Hermitian(B)
+    A = Symmetric(A); B = Symmetric(B)
     n = size(A,1)
     dist = Euclidean(n)
     return compute_distance(A, B, dist)
