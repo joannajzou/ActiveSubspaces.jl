@@ -61,8 +61,8 @@ end
 
 
 function plot_val_metric(val_type::String, val_tup::Tuple, lab_tup::Tuple, ylab::String, ttl::String; logscl=true)
-    colors = [:mediumpurple4, :skyblue1, :seagreen, :goldenrod1, :darkorange2] 
-    markers = [:utriangle, :hexagon, :circle, :diamond, :rect]
+    colors = [:mediumpurple4, :skyblue1, :seagreen, :goldenrod1, :darkorange2, :firebrick2] 
+    markers = [:utriangle, :hexagon, :circle, :diamond, :rect, :star]
     nsamp_arr = collect(keys(val_tup[1][val_type]))
     N = length(nsamp_arr)
 
@@ -72,9 +72,9 @@ function plot_val_metric(val_type::String, val_tup::Tuple, lab_tup::Tuple, ylab:
         title=ttl, xscale=log10, yscale=log10)   
     else
         ax = Axis(fig[1,1], xlabel="number of samples (n)", ylabel=ylab, xticks=(nsamp_arr, [string(nsamp) for nsamp in nsamp_arr]),
-        title=ttl, xscale=log10, yticks=0.0:0.005:0.025) 
+        title=ttl, xscale=log10) #  yticks=0.0:0.005:0.025) 
     end
-    offset_ratio = [-0.08, -0.04, 0, 0.04, 0.08]
+    offset_ratio = [-0.08, -0.04, 0, 0.04, 0.08, 0.12]
     # offsets = Point[(-20, 0), (-10, 0), (0,0), (10,0), (20,0)]
     # offsets = [exp.(os) for os in offsets]
     for (i, val_i, lab_i) in zip(1:length(val_tup), val_tup, lab_tup)
@@ -306,8 +306,8 @@ end
 
 
 function plot_IS_cdf(met_type::String, met_tup::Tuple, lab_tup::Tuple, ylab::String, ttl::String; limtype::Union{String, Vector}=nothing, rev=false, xticklab::Vector=nothing, logscl=true)
-    colors = [:skyblue1, :seagreen, :goldenrod1, :darkorange2] 
-    markers = [:hexagon, :circle, :diamond, :rect]
+    colors = [:skyblue1, :seagreen, :goldenrod1, :darkorange2, :firebrick2] 
+    markers = [:hexagon, :circle, :diamond, :rect, :star]
 
     M = length(met_tup)
     w_arr = [met_i[met_type] for met_i in met_tup]
