@@ -31,25 +31,33 @@ using Test
     @time ∇Qmc = grad_expectation(θtest, q, MCint) # using ForwardDiff
 
     # QoI with importance sampling
+    # draw MCMC samples
     g = Gibbs(V=V, ∇xV=∇xV, ∇θV=∇θV, β=0.2, θ=[3,3])
     ISGint = ISMCMC(g, nsamp, nuts, ρx0)
     Qis1, his1, wis1 = expectation(θtest, q, ISGint)
     @time ∇Qis1, ∇his1, ∇wis1 = grad_expectation(θtest, q, ISGint; gradh=∇θV) 
 
+    # use fixed samples
     xsamp = rand(g, nsamp, nuts, ρx0)
     ISGint2 = ISSamples(g, xsamp)
     Qis2, his2, wis2 = expectation(θtest, q, ISGint2)
     @time ∇Qis2, ∇his2, ∇wis2 = grad_expectation(θtest, q, ISGint2; gradh=∇θV)
 
+    # use uniform biasing disttribution
     πu = Uniform(-5,5)
     ISUint = ISMC(πu, nsamp)
     Qis3, his3, wis3 = expectation(θtest, q, ISUint)
     @time ∇Qis3, ∇his3, ∇wis3 = grad_expectation(θtest, q, ISUint)
 
+    # use fixed samples from biasing distribution
     xsamp = rand(πu, nsamp)
     ISUint2 = ISSamples(πu, xsamp)
     Qis4, his4, wis4 = expectation(θtest, q, ISUint2)
     @time ∇Qis4, ∇his4, ∇wis4 = grad_expectation(θtest, q, ISUint2)
+
+    # use mixture biasing distribution
+    
+
 
     # test with magnitude of error 
     @test abs((Qquad - Qmc)/Qquad) <= 0.1
