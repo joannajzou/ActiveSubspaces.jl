@@ -6,7 +6,7 @@ using StatsBase
 using JLD
 
 # select model
-modnum = 1
+modnum = 2
 include("model_param$modnum.jl")
 
 # select qoi
@@ -60,14 +60,16 @@ for j = 1:nrepl
         end
 
         # define mixture model
-        πg = Gibbs(πgibbs0, β=βarr[2], θ=ρθ.μ)
+        πg = Gibbs(πgibbs0, β=βarr[2], θ=ρθ.μ) 
+
         πc = [Gibbs(πgibbs0, β=βarr[3], θ=c) for c in centers]
         mm = MixtureModel(πc)
 
         # sample from proposal PDF
-        xsamp = rand(mm, 100000, nuts, ρx0)
+        xsamp = rand(πg, 100000, nuts, ρx0)
 
         # check samples
+        f = plot_pdf_with_sample_hist(πg, xplot, xsamp; ξx=ξx, wx=wx)
         # f = plot_pdf_with_sample_hist(mm, xplot, xsamp; ξx=ξx, wx=wx)
 
         # fig = Figure(resolution = (700, 600))
@@ -91,10 +93,10 @@ for j = 1:nrepl
 
         ISint = ISSamples(mm, xsamp)
 
-        t = @elapsed ∇Qis_i, metrics_i = compute_gradQ(θsamp[1:nsamptot], q, ISint; gradh=∇h)
+        t = @elapsed ∇Qis_i, metrics_i = compute_gradQ(θsamp, q, ISint; gradh=∇h)
         CIS[ncent] = compute_covmatrix(∇Qis_i, nsamp_arr)
         metrics[ncent] = metrics_i
-        println("IS MC Mixture (ncent=$ncent): $t sec.")
+        println("IS MC Mixture (ncent=$ncent): $t sec.")ß
     
     end
 

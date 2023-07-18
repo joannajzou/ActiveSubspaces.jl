@@ -1,15 +1,31 @@
 function compute_covmatrix_ref(quadpts::Tuple, q::GibbsQoI, p::Distribution, integrator::QuadIntegrator)
 # computes 2x2 reference covariance matrix using quadrature
     ξθ, wθ = quadpts
-    ngrid = length(ξθ)
+    ngrid = length(ξθ[1])
+    d = length(p.μ)
 
-    Cref = zeros(2,2)
-    for i = 1:ngrid
-        for j = 1:ngrid
-            println("($i, $j)")
-            ξij = [ξθ[i], ξθ[j]]
-            ∇Qij = grad_expectation(ξij, q, integrator)
-            Cref .+= ∇Qij*∇Qij' * pdf(p, ξij) * wθ[i] * wθ[j]
+    Cref = zeros(d,d)
+
+    
+    if d == 2
+        for i = 1:ngrid
+            for j = 1:ngrid
+                println("($i, $j)")
+                ξij = [ξθ[1][i], ξθ[2][j]]
+                ∇Qij = grad_expectation(ξij, q, integrator)
+                Cref .+= ∇Qij*∇Qij' * pdf(p, ξij) * wθ[1][i] * wθ[2][j]
+            end
+        end
+    elseif d == 3
+        for i = 1:ngrid
+            for j = 1:ngrid
+                for k = 1:ngrid
+                    println("($i, $j, $k)")
+                    ξij = [ξθ[1][i], ξθ[2][j], ξθ[3][k]]
+                    ∇Qij = grad_expectation(ξij, q, integrator)
+                    Cref .+= ∇Qij*∇Qij' * pdf(p, ξij) * wθ[1][i] * wθ[2][j] * wθ[3][k]
+                end
+            end
         end
     end
 
