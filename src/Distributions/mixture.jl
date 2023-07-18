@@ -21,14 +21,14 @@ end
 
 
 # 1 - random sampler
-function rand(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs}, n::Int, sampler::Sampler, ρ0::Distribution; burn=0.1)
+function rand(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs}, n::Int, sampler::Sampler, ρ0::Distribution; burn=1000)
     categories = StatsBase.sample(1:ncomponents(d), Weights(probs(d)), n)
     xsamp = Float64[]
     for i = 1:ncomponents(d)
         ni = length(findall(x -> x == i, categories))
-        nsim = Int(ceil((1+burn) * ni))
+        nsim = burn + ni
         xi = rand(component(d, i), nsim, sampler, ρ0; burn=0.0) 
-        append!(xsamp, xi[1:ni])
+        append!(xsamp, xi[burn+1:end])
     end
     return xsamp
 end 
