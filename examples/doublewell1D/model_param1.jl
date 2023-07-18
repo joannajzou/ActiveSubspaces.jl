@@ -1,19 +1,19 @@
-### script for specifying model variables and integrators 
+### symmetric double well potential based on quartic model
 
 # specify potential function and its gradients ###############################################################
-V(x, θ) = (θ[1] * x.^2) / 2 - (θ[2] * x.^4) / 4 - 1 # with neg sign
-∇xV(x, θ) = θ[1] * x - θ[2] * x.^3
-∇θV(x, θ) = [x^2 / 2, -x^4 / 4]
+V(x, θ) = - (θ[1] * x.^2) / 2 + (θ[2] * x.^4) / 4 + 1
+∇xV(x, θ) = - θ[1] * x + θ[2] * x.^3
+∇θV(x, θ) = [-x^2 / 2, x^4 / 4]
 
 # instantiate Gibbs object
 πgibbs0 = Gibbs(V=V, ∇xV=∇xV, ∇θV=∇θV)
 πgibbs = Gibbs(πgibbs0, β=1.0)
 
 # define sampling density for θ
-μθ = 4*ones(2) 
-Σθ = 0.2*I(2) 
+d = 2
+μθ = 4*ones(d) 
+Σθ = 0.2*I(d) 
 ρθ = MvNormal(μθ, Σθ)                           # prior on θ 
-θrng = [μθ[1] - 3.5*sqrt(Σθ[1,1]), μθ[1] + 3.5*sqrt(Σθ[1,1])] # θ-domain
 
 # define x-domain
 ρx0 = Uniform(-2, 2)                            # sampling density for initial state x0
@@ -25,9 +25,15 @@ xplot = Vector(LinRange(ll, ul, 1000))          # plot domain
 
 # QuadIntegrator
 ngrid = 100                                     # number of θ quadrature points in 1D
-ξθ, wθ = gausslegendre(ngrid, θrng[1], θrng[2]) # 2D quad points over θ
 ξx, wx = gausslegendre(200, -10, 10)            # 1D quad points over x
 GQint = GaussQuadrature(ξx, wx)
+
+ξθ = Vector{Vector{Float64}}(undef, d)          # 2D quad points over θ
+wθ = Vector{Vector{Float64}}(undef, d)
+for i = 1:d
+    θrng = [ρθ.μ[i] - 3.5*sqrt(ρθ.Σ[i,i]), ρθ.μ[i] + 3.5*sqrt(ρθ.Σ[i,i])]
+    ξθ[i], wθ[i] = gausslegendre(ngrid, θrng[1], θrng[2]) # 2D quad points over θ
+end
 
 # MCIntegrator
 nMC = 10000                                     # number of MC/MCMC samples

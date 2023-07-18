@@ -61,7 +61,7 @@ function rand(d::Gibbs, n::Int, sampler::Sampler, ρ0::Distribution; burn=0.1)
 end
 
 # 2 - unnormalized pdf
-updf(d::Gibbs, x) = exp(d.β * d.V(x))
+updf(d::Gibbs, x) = exp(-d.β * d.V(x))
 
 # 3 - normalization constant (partition function)
 function normconst(d::Gibbs, ξ::Vector, w::Vector)
@@ -69,10 +69,10 @@ function normconst(d::Gibbs, ξ::Vector, w::Vector)
 end
 
 # 4 - log unnormalized pdf
-logupdf(d::Gibbs, x) = d.β * d.V(x)
+logupdf(d::Gibbs, x) = -d.β * d.V(x)
 
 # 5 - gradlogpdf (wrt x)
-gradlogpdf(d::Gibbs, x) = d.β * d.∇xV(x)
+gradlogpdf(d::Gibbs, x) = -d.β * d.∇xV(x)
 
 # 6 - minimum
 minimum(d::Gibbs) = -Inf

@@ -1,30 +1,26 @@
-### symmetric double well potential based on explicit parameterization of well depth and distancec
-# ref: https://arxiv.org/abs/1209.2521
+### asymmetric double well potential with additional cubic term
+# ref: https://link.springer.com/article/10.1007/s10910-022-01328-9
 
 # specify potential function and its gradients ###############################################################
 
-# rescaling parameters
-a = 0.2
-b = 0.2
+V(x, θ) = exp(θ[1])*x^2 - exp(θ[2])*x^3 + exp(θ[3])*x^4
+∇xV(x, θ) = 2*exp(θ[1])*x - 3*exp(θ[2])*x^2 + 4*exp(θ[3])*x^4
+∇θV(x, θ) = [x^2, -x^3, x^4]
 
-V(x, θ) = (a*θ[1] / (b*θ[2])^2) * ((x)^2 - (b*θ[2]) )^2 # with neg sign
-∇xV(x, θ) = 4 * (a*θ[1] / (b*θ[2])^2) * ((x)^2 - (b*θ[2])) * (x)
-∇θV(x, θ) = [ (a / (b*θ[2])^2) * ((x)^2 - (b*θ[2]) )^2,
-          - 2*a*b*θ[1] * ( ((x)^2 - (b*θ[2]))^2 / (b*θ[2])^3 + ((x)^2 - (b*θ[2])) / (b*θ[2])^2 ) ]
 
 # instantiate Gibbs object
 πgibbs0 = Gibbs(V=V, ∇xV=∇xV, ∇θV=∇θV)
 πgibbs = Gibbs(πgibbs0, β=1.0)
 
 # define sampling density for θ
-d = 2
-μθ = 4*ones(d) 
-Σθ = 0.2*I(d) 
+d = 3
+μθ = [log(9), log(17.75), log(9)] # [log(16), log(24), log(9)]
+Σθ = 5e-4*I(d)
 ρθ = MvNormal(μθ, Σθ)                           # prior on θ 
 
 # define x-domain
-ρx0 = Uniform(-2, 2)                            # sampling density for initial state x0
-ll = -3; ul = 3                                 # lower and upper limits
+ρx0 = Uniform(-0.2, 1.2)                        # sampling density for initial state x0
+ll = -2; ul = 3                                 # lower and upper limits
 xplot = Vector(LinRange(ll, ul, 1000))          # plot domain
 
 
@@ -49,5 +45,6 @@ MCint = MCMC(nMC, nuts, ρx0)
 
 # ISIntegrator
 πu = Uniform(ll, ul)                            # importance sampling: uniform distribution
-βarr = [0.02, 0.2, 1.0]                         # importance sampling: temp parameter for Gibbs biasing dist.
+βarr = [0.005, 0.5, 1.0]                         # importance sampling: temp parameter for Gibbs biasing dist.
 nβ = length(βarr)
+
