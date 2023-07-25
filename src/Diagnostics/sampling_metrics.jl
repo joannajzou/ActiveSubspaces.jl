@@ -1,3 +1,68 @@
+
+"""
+function MCSE(q::GibbsQoI, xsamp::Vector)
+
+Estimates the Monte Carlo standard error (se = std(h(x))/√n) using an empirical estimate of standard deviation.
+
+# Arguments
+- `q :: GibbsQoI`     : Gibbs QoI struct
+- `xsamp :: Vector`   : vector of samples
+
+# Outputs
+- `se :: Float64`     : Monte Carlo standard error
+"""
+function MCSE(q::GibbsQoI, xsamp::Vector)
+    hsamp = q.h(xsamp)
+    n = length(xsamp)
+    σ2 = 1/(n-1) * sum(hsamp .- mean(hsamp)).^2
+    return sqrt(σ2/n)
+end
+
+
+"""
+function MCSEbm(q::GibbsQoI, xsamp::Vector)
+
+Estimates the Monte Carlo standard error (se = std(h(x))/√n) using the batch means (BM) method.
+
+# Arguments
+- `q :: GibbsQoI`     : Gibbs QoI struct
+- `xsamp :: Vector`   : vector of samples
+
+# Outputs
+- `se :: Float64`     : Monte Carlo standard error
+"""
+function MCSEbm(q::GibbsQoI, xsamp::Vector)
+    n = length(xsamp)
+    a = Int(floor(sqrt(n)))
+    Ȳk = [(1/a)*sum([q.h(xsamp[k*a+i]) for i = 1:a]) for k = 0:(a-1)]
+    h̄ = mean(q.h.(xsamp))
+    σ2 = a/(a-1) * sum((Ȳk .- h̄).^2)
+    return sqrt(σ2/n)
+end
+
+
+"""
+function MCSEbm(q::GibbsQoI, xsamp::Vector)
+
+Estimates the Monte Carlo standard error (se = std(h(x))/√n) using the overlapping batch means (OBM) method.
+
+# Arguments
+- `q :: GibbsQoI`     : Gibbs QoI struct
+- `xsamp :: Vector`   : vector of samples
+
+# Outputs
+- `se :: Float64`     : Monte Carlo standard error
+"""
+function MCSEobm(q::GibbsQoI, xsamp::Vector)
+    n = length(xsamp)
+    a = Int(floor(sqrt(n)))
+    Ȳk = [(1/a)*sum(q.h.(xsamp[(k+1):(k+a)])) for k = 0:(n-a)]
+    h̄ = mean(q.h.(xsamp))
+    σ2 = n*a/(n-a)/(n-a+1) * sum((Ȳk .- h̄).^2)
+    return sqrt(σ2/n)
+end
+
+
 """
 function EffSampleSize(hsamp::Vector)
 

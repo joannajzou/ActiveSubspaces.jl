@@ -11,5 +11,6 @@ function init_metrics_dict(n::Int64)
     return metrics
 end
 
-
-export ForstnerDistance, EuclideanDistance, WeightedSubspaceDistance, EffSampleSize, ISWeightVariance, ISWeightESS, ISWeightDiagnostic, init_metrics_dict
+export init_metrics_dict
+export MCSE, MCSEbm, MCSEobm, EffSampleSize, ISWeightVariance, ISWeightESS, ISWeightDiagnostic 
+export ForstnerDistance, EuclideanDistance, WeightedSubspaceDistance
