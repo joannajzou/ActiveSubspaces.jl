@@ -57,7 +57,15 @@ function rand(d::Gibbs, n::Int, sampler::Sampler, ρ0::Distribution; burn=0.1)
     lπ = x -> logupdf(d, x)
     gradlπ = x -> gradlogpdf(d, x)
     xsamp = sample(lπ, gradlπ, sampler, nsim, rand(ρ0))
-    return xsamp[1:n]
+    return xsamp[(nsim - n + 1):end]
+end
+
+function rand(d::Gibbs, n::Int, sampler::Sampler, x0::Vector; burn=0.1)
+    nsim = Int(ceil((1+burn) * n))
+    lπ = x -> logupdf(d, x)
+    gradlπ = x -> gradlogpdf(d, x)
+    xsamp = sample(lπ, gradlπ, sampler, nsim, x0)
+    return xsamp[(nsim - n + 1):end]
 end
 
 # 2 - unnormalized pdf
