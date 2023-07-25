@@ -9,9 +9,9 @@ include("plotting_utils.jl")
 
 
 # evaluate MD trajectory #############################################################################
-coeff = "mean"
-Tend = Int(3E6)       # number of steps
-dT = 200   
+coeff = 2
+Tend = Int(4E6)       # number of steps
+dT = 250   
 dt = 0.0025
 
 ds0 = load_data("$(simdir)coeff_$coeff/data.xyz", ExtXYZ(u"eV", u"Å"))
