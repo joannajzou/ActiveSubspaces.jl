@@ -121,7 +121,7 @@ function grad_expectation(θ::Union{Real, Vector{<:Real}}, qoi::GeneralQoI, inte
     end
 
     # compute outer expectation
-    hh(x, γ) = ∇θh(x, γ) + qoi.p.β * qoi.h(x, γ) * (qoi.p.∇θV(x, γ) - E_∇θV)
+    hh(x, γ) = ∇θh(x, γ) - qoi.p.β * qoi.h(x, γ) * (qoi.p.∇θV(x, γ) - E_∇θV)
     hh_qoi = GeneralQoI(h=hh, p=qoi.p)
     return expectation(θ, hh_qoi, integrator)
 

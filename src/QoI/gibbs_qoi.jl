@@ -178,7 +178,7 @@ function grad_expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integr
     E_∇θV, _, _ = expectation(θ, E_qoi, integrator) # for ISIntegrator
 
     # compute outer expectation
-    hh(x, γ) = ∇θh(x, γ) + qoi.p.β * qoi.h(x, γ) * (qoi.p.∇θV(x, γ) - E_∇θV)
+    hh(x, γ) = ∇θh(x, γ) - qoi.p.β * qoi.h(x, γ) * (qoi.p.∇θV(x, γ) - E_∇θV)
     hh_qoi = GibbsQoI(h=hh, p=qoi.p)
     return expectation(θ, hh_qoi, integrator)
 
@@ -198,7 +198,7 @@ function grad_expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integr
     E_∇θV = expectation(θ, E_qoi, integrator)
 
     # compute outer expectation
-    hh(x, γ) = ∇θh(x, γ) + qoi.p.β * qoi.h(x, γ) * (qoi.p.∇θV(x, γ) - E_∇θV)
+    hh(x, γ) = ∇θh(x, γ) - qoi.p.β * qoi.h(x, γ) * (qoi.p.∇θV(x, γ) - E_∇θV)
     hh_qoi = GibbsQoI(h=hh, p=qoi.p)
     return expectation(θ, hh_qoi, integrator)
 
