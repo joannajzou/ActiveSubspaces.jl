@@ -22,14 +22,14 @@ function sample(lπ::Function, gradlπ::Function, sampler::NUTS, n::Int64, x0::V
 Draw samples from target distribution π(x) using the No-U-Turn Sampler (NUTS) from the AdvancedHMC package. Assumes multi-dimensional support (x::Vector).
 
 # Arguments
-- `lπ :: Function`        : log likelihood of target π
-- `gradlπ :: Function`    : gradient of log likelihood of π
-- `sampler :: HMC`        : Sampler struct specifying sampling algorithm
-- `n::Int64`              : number of samples (include number of samples for burn-in)
-- `x0::Vector{<:Real}`    : initial state
+- `lπ :: Function`              : log likelihood of target π
+- `gradlπ :: Function`          : gradient of log likelihood of π
+- `sampler :: HMC`              : Sampler struct specifying sampling algorithm
+- `n :: Int64`                  : number of samples
+- `x0 :: Vector{<:Real}`        : initial state
 
 # Outputs
-- `samples::Vector{Vector}`    : vector of samples from π
+- `samples::Vector{Vector}`     : vector of samples from π
 
 """
 function sample(lπ::Function, gradlπ::Function, sampler::NUTS, n::Int64, x0::Vector{<:Real})
@@ -63,11 +63,11 @@ Draw samples from target distribution π(x) using the No-U-Turn Sampler (NUTS) f
 - `lπ :: Function`        : log likelihood of target π
 - `gradlπ :: Function`    : gradient of log likelihood of π
 - `sampler :: HMC`        : Sampler struct specifying sampling algorithm
-- `n::Int64`              : number of samples (include number of samples for burn-in)
-- `x0::Vector{<:Real}`    : initial state
+- `n :: Int64`            : number of samples
+- `x0 :: Real`            : initial state
 
 # Outputs
-- `samples::Vector{Vector}`    : vector of samples from π
+- `samples :: Vector`     : vector of samples from π
 
 """
 function sample(lπ::Function, gradlπ::Function, sampler::NUTS, n::Int64, x0::Real)
@@ -164,11 +164,3 @@ end
 # Hamiltonian
 H(x::Float64, r::Float64, lπ::Function) = exp( lπ(x) .- 0.5 * r' * r )
 
-# Metropolis-Hastings step
-function accept_or_reject(α :: Real)
-    logα = min( 0.0, α )
-    log(rand()) <= logα
-end
-
-# indicator function
-Ind(α::Bool) = α ? 1 : 0
