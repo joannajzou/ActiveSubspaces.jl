@@ -1,4 +1,3 @@
-### potential function and gradients of 1D-state 2D-parameter double well model
 using ActiveSubspaces
 using Distributions
 using LinearAlgebra

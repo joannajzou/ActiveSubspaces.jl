@@ -1,4 +1,3 @@
-### potential function and gradients of 1D-state 2D-parameter double well model
 using ActiveSubspaces
 using Distributions
 using LinearAlgebra
@@ -6,7 +5,7 @@ using JLD
 
 # select model
 modnum = 3
-include("model_param$modnum.jl")
+include("model_param$(modnum).jl")
 
 # select qoi
 include("qoi_meanenergy.jl")
@@ -22,17 +21,17 @@ nrepl = 5                                       # number of replications per sam
 
 
 # compute reference covariance matrix ############################################################
-Cref = compute_covmatrix_ref((ξθ, wθ), q, ρθ, GQint)
+# Cref = compute_covmatrix_ref((ξθ, wθ), q, ρθ, GQint)
 
-JLD.save("data$modnum/DW1D_Ref.jld",
-        "ngrid", ngrid,
-        "Cref", Cref,
-    )
+# JLD.save("data$modnum/DW1D_Ref.jld",
+#         "ngrid", ngrid,
+#         "Cref", Cref,
+#     )
 
 
 # run MC trials ##################################################################################
 
-for j = 1:nrepl
+for j = 2:nrepl
 
     try
         path = "data$modnum/repl$j"
@@ -44,9 +43,13 @@ for j = 1:nrepl
 
     # sample parameters
     nsamptot = nsamp_arr[end] # largest number of samples
+
     θsamp = [rand(ρθ) for i = 1:nsamptot]   
     # θsamp = remove_outliers(θsamp)
     # nsamp_arr[end] = length(θsamp)
+
+    # or load
+    # θsamp = JLD.load("data$modnum/repl$j/DW1D_ISG_nsamp=$nsamptot.jld")["metrics"][0.5]["θsamp"]
 
     # MC estimate ------------------------------------------------------------------------
     t = @elapsed ∇Qmc = compute_gradQ(θsamp, q, MCint; gradh=∇h) 
@@ -105,9 +108,9 @@ for j = 1:nrepl
     
     ncent = 10
     # select centers of proposal PDFs
-    centers, temp, weights, _ = JLD.load("data$modnum/mixturedist.jld")
-    πc = [Gibbs(πgibbs0, β=temp, θ=c) for c in centers]
-    mm = MixtureModel(πc, weights)
+    data = JLD.load("data$modnum/mixturedist.jld") 
+    πc = [Gibbs(πgibbs0, β=data["temp"], θ=c) for c in data["centers"]]
+    mm = MixtureModel(πc, data["weights"])
 
     # centers = reduce(vcat, ([ρθ.μ], [rand(ρθ) for i = 1:ncent-1]))
 
@@ -162,6 +165,13 @@ for j = 1:nrepl
     metrics[ncent] = metrics_i
     println("IS MC Mixture (ncent=$ncent): $t sec.")
     
+    JLD.save("data$modnum/repl$j/DW1D_ISM_nsamp=$(nsamptot).jld",
+        "nx", nMC,
+        "ncent", ncent,
+        "C", CIS,
+        "metrics", metrics,
+    )
+
 
 end
 
