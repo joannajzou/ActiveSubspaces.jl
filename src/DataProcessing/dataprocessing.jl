@@ -13,7 +13,8 @@ Converts a general multivariate normal variable to standard multivariate normal 
 """
 function mvn_to_std(v::Vector, ρ::MvNormal)
     L = cholesky(ρ.Σ).L
-    return pinv(L) * (v - ρ.μ) 
+    z = pinv(L) * (v - ρ.μ) 
+    return z
 end
 
 """
@@ -31,7 +32,8 @@ Converts a standard multivariate normal variable to general multivariate normal 
 """
 function std_to_mvn(z::Vector, ρ::MvNormal)
     L = cholesky(ρ.Σ).L
-    return ρ.μ + L*z
+    v = ρ.μ + L*z
+    return v
 end
 
 
