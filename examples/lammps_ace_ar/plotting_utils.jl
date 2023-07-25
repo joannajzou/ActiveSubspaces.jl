@@ -199,6 +199,7 @@ function plot_mcmc_trace(postsamp::Vector{Vector{Float64}})
 end
 
 function plot_mcmc_autocorr(postsamp::Matrix; lags=0:1000)
+    d = size(postsamp, 1)
     fig = Figure(resolution=(1000, 750))
     ax = Axis(fig[1,1], xlabel="lag (τ)", ylabel="autocorr.")
     for i = 1:d
@@ -212,6 +213,54 @@ end
 function plot_mcmc_autocorr(postsamp::Vector{Vector{Float64}})
     postsamp = reduce(hcat, postsamp)
     return plot_mcmc_autocorr(postsamp)
+end
+
+
+function plot_mcmc_marginals(postsamp::Matrix; plottitle="")
+    nθ = size(postsamp, 1)
+
+    fig = Figure(resolution = (1000, 1000))
+    # Label(fig[-1,1:nθ], text = plottitle, textsize = 20)
+    ax = Matrix{Axis}(undef, (nθ, nθ))
+
+    for j = 1:nθ
+        for i = j:nθ
+            # set axes
+            # if i == nθ
+            #     ax[i,j] = Axis(fig[i+1,j][1,1],
+            #                     xticksvisible=false,
+            #                     xticklabelsvisible=false,
+            #                     yticksvisible=false,
+            #                     yticklabelsvisible=false)
+            if j == i
+                ax[i,j] = Axis(fig[i+1,j][1,1], title="x$i",
+                                xticksvisible=false,
+                                xticklabelsvisible=false,
+                                yticksvisible=false,
+                                yticklabelsvisible=false)
+            else
+                ax[i,j] = Axis(fig[i+1,j][1,1],
+                                xticksvisible=false,
+                                xticklabelsvisible=false,
+                                yticksvisible=false,
+                                yticklabelsvisible=false)
+            end
+
+            if i != j
+                scatter!(ax[i,j], postsamp[i,:], postsamp[j,:], color=(:blue, 0.05))
+
+            else # i == j
+                hist!(ax[i,i], postsamp[i,:], bins=50, color=(:blue, 0.5))
+            end
+        end
+    end
+    fig
+
+end
+
+function plot_mcmc_marginals(postsamp::Vector{Vector{Float64}}; plottitle="")
+    postsamp = reduce(hcat, postsamp)
+    return plot_mcmc_marginals(postsamp)
 end
 
 
