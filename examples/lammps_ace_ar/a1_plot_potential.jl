@@ -1,10 +1,62 @@
 include("00_spec_model.jl")
+include("qoi_meanenergy.jl")
 include("plotting_utils.jl")
 
 # load posterior distribution
 μ = JLD.load("$(simdir)coeff_distribution.jld")["μ"]
 Σ = JLD.load("$(simdir)coeff_distribution.jld")["Σ"]
 πβ = MvNormal(μ, Σ)
+
+
+# evaluate MD trajectory #############################################################################
+coeff = "mean"
+Tend = Int(3E6)       # number of steps
+dT = 200   
+dt = 0.0025
+
+ds0 = load_data("$(simdir)coeff_$coeff/data.xyz", ExtXYZ(u"eV", u"Å"))
+# Filter first configuration (zero energy)
+ds = ds0[1001:end]
+
+systems = get_system.(ds)
+n_atoms = length(first(systems))
+positions = position.(systems)
+dists_origin = map(x->ustrip.(norm.(x)), positions)
+energies = get_values.(get_energy.(ds))
+Φsamp = sum.(get_values.(compute_local_descriptors(ds, ace)))
+time_range = (1001:length(ds0)).*dT*dt
+
+
+# trace plots of distance to origin and energies
+size_inches = (12, 10)
+size_pt = 72 .* size_inches
+fig = Figure(resolution = size_pt, fontsize = 16)
+ax1 = Axis(fig[1,1], xlabel = "τ | ps", ylabel = "Distance from origin | Å")
+ax2 = Axis(fig[2,1], xlabel = "τ | ps", ylabel = "Lennard Jones energy | eV")
+for i = 1:n_atoms
+    lines!(ax1, time_range, map(x->x[i], dists_origin))
+end
+lines!(ax2, time_range, energies)
+fig
+
+# trace plots in descriptor space
+fig2 = plot_mcmc_trace(Φsamp)
+fig3 = plot_mcmc_autocorr(Φsamp)
+fig4 = plot_mcmc_marginals(Φsamp)
+
+# standard error
+nrng = 1000:100:length(time_range)
+qoim = GibbsQoI(h = x -> q.h(x, πβ.μ), p=Gibbs(q.p, θ=πβ.μ))
+se_bm = [MCSEbm(qoim, Φsamp[1:n]) for n in nrng]
+# se_obm = [MCSEobm(qoim, Φsamp[1:n]) for n in 1000:500:20000]
+ess = EffSampleSize(Φsamp)
+
+f = Figure(resolution=(800, 800))
+ax = Axis(f[1,1],  xlabel = "τ | ps", ylabel="MCSE")
+lines!(ax, nrng, se_bm, label="BM")
+# lines!(ax, 1000:500:20000, se_obm, label="OBM")
+# axislegend(ax)
+f
 
 
 # check sampling density in pairwise energy plot ###########################################################################
