@@ -13,7 +13,7 @@ function energy_minimization(save_dir::String; de=1.0e-4, maxforce=1.0e-6, maxit
             command(lmp, "units metal")
             command(lmp, "dimension 3")
             command(lmp, "atom_style atomic")
-            command(lmp, "boundary f f f")
+            command(lmp, "boundary p p p")
 
             # setup box
             command(lmp, "region mybox block -5 5 -5 5 -5 5")
@@ -22,11 +22,11 @@ function energy_minimization(save_dir::String; de=1.0e-4, maxforce=1.0e-6, maxit
             # create atoms
             natoms = 13
             command(lmp, "create_atoms 1 random $natoms 341341 mybox") # init. at random seed
-            command(lmp, "mass 1 1")
+            command(lmp, "mass 1 39.948")
 
             # interatomic potential
-            command(lmp, "pair_style lj/cut 2.5") # LJ potential
-            command(lmp, "pair_coeff 1 1 1.0 1.0")      
+            command(lmp, "pair_style pace")
+            command(lmp, "pair_coeff * * $(save_dir)parameters.ace Ar") 
             command(lmp, "neigh_modify every 1 delay 5 check yes")
 
             # thermo
@@ -35,7 +35,7 @@ function energy_minimization(save_dir::String; de=1.0e-4, maxforce=1.0e-6, maxit
             # run energy minimization
             command(lmp, "minimize $de $maxforce $maxiter $maxeval") # with stopping criteria
 
-            command(lmp, "write_data $(save_dir)minimized_config.lj")
+            command(lmp, "write_data $(save_dir)starting_configuration.lj")
         
         end
     end
@@ -59,7 +59,7 @@ function run_md(Tend::Int, file_dir::String, save_dir::String; seed = 1, Temp = 
 
             # Setup box
             command(lmp, "region mybox block -5 5 -5 5 -5 5")
-            command(lmp, "read_data starting_configuration.lj")
+            command(lmp, "read_data $(save_dir)starting_configuration.lj")
 
             command(lmp, "mass 1 39.948")
             command(lmp, "velocity all create $(Temp) $seed mom yes rot yes dist gaussian")
