@@ -13,6 +13,7 @@ Manifest.toml
 
 # data too large for github
 examples/lammps_ace_ar/ACE_MD_2body_8deg
+examples/lammps_ace_ar/ACE_MD_2body_8deg_2
 examples/lammps_ace_ar/ACE_MD_2body_16deg
 examples/lammps_ace_ar/ACE_MD_3body_8deg
 examples/doublewell1D/data2
