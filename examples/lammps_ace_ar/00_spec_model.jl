@@ -13,7 +13,7 @@ using JLD
 # define ACE basis
 nbody = 2
 deg = 8
-simdir = "ACE_MD_$(nbody)body_$(deg)deg_2/"
+simdir = "ACE_MD_$(nbody)body_$(deg)deg_3/"
 
 ace = ACE(species = [:Ar],         # species
           body_order = nbody,      # 2-body

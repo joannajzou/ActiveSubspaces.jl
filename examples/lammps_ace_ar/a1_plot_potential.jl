@@ -9,14 +9,14 @@ include("plotting_utils.jl")
 
 
 # evaluate MD trajectory #############################################################################
-coeff = 2
-Tend = Int(4E6)       # number of steps
-dT = 250   
+coeff = "mean"
+Tend = Int(5E6)       # number of steps
+dT = 500   
 dt = 0.0025
 
 ds0 = load_data("$(simdir)coeff_$coeff/data.xyz", ExtXYZ(u"eV", u"Å"))
 # Filter first configuration (zero energy)
-ds = ds0[1001:end]
+ds = ds0[2001:end]
 
 systems = get_system.(ds)
 n_atoms = length(first(systems))
@@ -24,7 +24,7 @@ positions = position.(systems)
 dists_origin = map(x->ustrip.(norm.(x)), positions)
 energies = get_values.(get_energy.(ds))
 Φsamp = sum.(get_values.(compute_local_descriptors(ds, ace)))
-time_range = (1001:length(ds0)).*dT*dt
+time_range = (2001:length(ds0)).*dT*dt
 
 
 # trace plots of distance to origin and energies
@@ -45,7 +45,7 @@ fig3 = plot_mcmc_autocorr(Φsamp)
 fig4 = plot_mcmc_marginals(Φsamp)
 
 # standard error
-nrng = 1000:100:length(time_range)
+nrng = 1000:50:length(time_range)
 qoim = GibbsQoI(h = x -> q.h(x, πβ.μ), p=Gibbs(q.p, θ=πβ.μ))
 se_bm = [MCSEbm(qoim, Φsamp[1:n]) for n in nrng]
 # se_obm = [MCSEobm(qoim, Φsamp[1:n]) for n in 1000:500:20000]

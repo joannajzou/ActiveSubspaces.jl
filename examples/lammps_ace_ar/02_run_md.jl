@@ -10,8 +10,8 @@ using CairoMakie
 
 # function ############################################################################################
 function run_md_ar(coeff, simdir::String, β::Vector{Float64}, Temp::Float64)
-    Tend = Int(4E6)       # number of steps
-    dT = 250              # time step output
+    Tend = Int(5E6)       # number of steps
+    dT = 500              # time step output
 
     println("coeff $coeff")
 
@@ -37,7 +37,7 @@ end
 
 
 # compute energy with MD #############################################################################
-nsamp = 1000            # number of coefficient samples
+nsamp = 2 # 1000            # number of coefficient samples
 Temp = 0.6*120          # temperature
 βsamp = [rand(πβ) for i = 1:nsamp]
 JLD.save("$(simdir)coeff_samples_1-1000.jld",
@@ -45,7 +45,7 @@ JLD.save("$(simdir)coeff_samples_1-1000.jld",
 
 
 # compute at mean/nominal get_values
-run_md_ar("mean", simdir, πβ.μ, Temp)
+# run_md_ar("mean", simdir, πβ.μ, Temp)
 
 # iterate over coefficient samples
 for coeff = 1:nsamp       
