@@ -2,6 +2,7 @@ include("00_spec_model.jl")
 include("define_md_LAMMPS_ace.jl")
 using CairoMakie 
 
+
 # load posterior distribution
 μ = JLD.load("$(simdir)coeff_distribution.jld")["μ"]
 Σ = JLD.load("$(simdir)coeff_distribution.jld")["Σ"]
@@ -37,10 +38,10 @@ end
 
 
 # compute energy with MD #############################################################################
-nsamp = 2 # 1000            # number of coefficient samples
+nsamp = 1 # 500            # number of coefficient samples
 Temp = 0.6*120          # temperature
 βsamp = [rand(πβ) for i = 1:nsamp]
-JLD.save("$(simdir)coeff_samples_1-1000.jld",
+JLD.save("$(simdir)coeff_samples_1-500.jld",
         "βsamp", βsamp)
 
 
