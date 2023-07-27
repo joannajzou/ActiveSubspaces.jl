@@ -59,7 +59,7 @@ function run_md(Tend::Int, file_dir::String, save_dir::String; seed = 1, Temp = 
 
             # Setup box
             command(lmp, "region mybox block -5 5 -5 5 -5 5")
-            command(lmp, "read_data $(save_dir)starting_configuration.lj")
+            command(lmp, "read_data $(save_dir)starting_configuration.lj") # starting_configuration.lj
 
             command(lmp, "mass 1 39.948")
             command(lmp, "velocity all create $(Temp) $seed mom yes rot yes dist gaussian")

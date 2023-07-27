@@ -12,8 +12,21 @@ function compute_gradQ(θsamp::Vector{Vector{Float64}}, q::GibbsQoI, simdir::Str
             e_descr = compute_local_descriptors(ds, ace)
             Φsamp = sum.(get_values.(e_descr))
             MCint = MCSamples(Φsamp)
+
+            # gradient
             ∇Q[j] = grad_expectation(θsamp[j], q, MCint, gradh=gradh)
-            JLD.save("$(simdir)coeff_$coeff/gradQ_meanenergy.jld", "∇Q", ∇Q[j])
+
+            # diagnostics
+            qoi = GibbsQoI(h = x -> q.h(x, θsamp[j]), p=Gibbs(q.p, θ=θsamp[j]))
+            se = MCSEbm(qoi, Φsamp)
+            ess = EffSampleSize(qoi, Φsamp)
+
+            # save data
+            JLD.save("$(simdir)coeff_$coeff/energy_descriptors.jld", "Bsamp", Φsamp)
+            JLD.save("$(simdir)coeff_$coeff/gradQ_meanenergy.jld",
+                    "∇Q", ∇Q[j],
+                    "se", se,
+                    "ess", ess)
         catch
             append!(id_skip, coeff)
         end

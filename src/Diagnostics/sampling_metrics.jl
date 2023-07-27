@@ -64,6 +64,24 @@ end
 
 
 """
+function EffSampleSize(q::GibbsQoI, xsamp::Vector)
+
+Computes the effective sample size of a set of nMC samples from an MCMC chain. 
+
+# Arguments
+- `q :: GibbsQoI`     : Gibbs QoI struct
+- `xsamp :: Vector`   : nMC-vector of x-samples
+
+# Outputs
+- `ESS :: Float64`    : effective sample size (where 1 < ESS < nMC)
+"""
+function EffSampleSize(q::GibbsQoI, xsamp::Vector)
+    hsamp = q.h.(xsamp)
+    return EffSampleSize(hsamp)
+end
+
+
+"""
 function EffSampleSize(hsamp::Vector)
 
 Computes the effective sample size of a set of nMC samples from an MCMC chain. 
