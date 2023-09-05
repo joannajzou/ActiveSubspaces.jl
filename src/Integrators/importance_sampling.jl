@@ -45,10 +45,21 @@ This method is implemented with the user providing samples from the biasing dist
 - `g :: Distribution`           : biasing distribution
 - `xsamp :: Vector`     : fixed set of samples
 """
-struct ISSamples <: ISIntegrator
+mutable struct ISSamples <: ISIntegrator
     g :: Distribution
     xsamp :: Vector
+    normint :: Union{Integrator, Nothing}
+
+    function ISSamples(g::MixtureModel, xsamp::Vector, normint::Integrator)
+        return new(g, xsamp, normint)
+    end
+
+    function ISSamples(g::Distribution, xsamp::Vector)
+        return new(g, xsamp, nothing)
+    end
+
 end
+
 
 
 """
@@ -63,10 +74,30 @@ This method is implemented with the user providing samples from each component m
 - `n :: Int`                 : number of samples
 - `knl :: Kernel`            : kernel function to compute mixture weights
 - `xsamp :: Vector`          : Vector of sample sets from each component distribution
+- `normint :: Integrator`    : Integrator for the approximating the normalizing constant of each component distribution
+
 """
-struct ISMixSamples <: ISIntegrator
+mutable struct ISMixSamples <: ISIntegrator
     g :: MixtureModel
+    refs :: Vector
     n :: Int
     knl :: Kernel
-    xsamp :: Vector{Vector{Vector{<:Real}}}
+    xsamp :: Vector
+    normint :: Integrator
+
+
+    function ISMixSamples(g::MixtureModel, refs::Vector, n::Int, knl::Kernel, xsamp::Vector, normint::Integrator)
+        return new(g, refs, n, knl, xsamp, normint)
+    end
+
+    function ISMixSamples(g::MixtureModel, n::Int, knl::Kernel, xsamp::Vector, normint::Integrator)
+        d = new()
+        d.g = g
+        d.refs = [πg.θ for πg in g.components]
+        d.n = n
+        d.knl = knl
+        d.xsamp = xsamp
+        d.normint = normint
+        return d
+    end
 end
