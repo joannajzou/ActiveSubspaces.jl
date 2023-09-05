@@ -15,14 +15,14 @@ Tend = Int(5E6)       # number of steps
 dT = 500
 dt = 0.0025
 
-ds0 = load_data("$(simdir)coeff_$coeff/data.xyz", ExtXYZ(u"eV", u"Å"))
+ds0 = load_data("$(biasdir)coeff_$coeff/data.xyz", ExtXYZ(u"eV", u"Å"))
 # Filter first configuration (zero energy)
 ds = ds0[2001:end]
 
 systems = get_system.(ds)
 n_atoms = length(first(systems))
-positions = position.(systems)
-dists_origin = map(x -> ustrip.(norm.(x)), positions)
+pos = position.(systems)
+dists_origin = map(x -> ustrip.(norm.(x)), pos)
 energies = get_values.(get_energy.(ds))
 Φsamp = sum.(get_values.(compute_local_descriptors(ds, ace)))
 time_range = (2001:length(ds0)) .* dT * dt

@@ -23,82 +23,76 @@ idkeep = symdiff(1:1450, idskip)
 βsamp_2 = βsamp[idkeep]
 
 # load centers
-cents = JLD.load("$(simdir)/gradQ_IS_EW_nc=150/gradQ_ISM_$(iternum).jld")["centers"]
+cents_iso = JLD.load("$(simdir)/gradQ_IS_EW_nc=150/gradQ_ISM_$(iternum).jld")["centers"]
+cents_cov = JLD.load("$(simdir)/gradQ_IS_EW_nc=150/gradQ_ISM_$(iternum+4).jld")["centers"]
 
 # load MC estimates
 ∇Qmc = [JLD.load("$(simdir)coeff_$j/gradQ_meanenergy.jld")["∇Q"] for j in idkeep]
 # JLD.save("$(simdir)gradQ_MC.jld", "∇Q", ∇Qmc)
 
-nprop_arr = [50, 100, 150]
+nprop_arr = [150]
 niter = 3
 iternum = 1 
 
-∇Qis_e = Dict{Int64, Vector{Vector}}()
-∇Qis_et = Dict{Int64, Vector{Vector}}()
-∇Qis_v = Dict{Int64, Vector{Vector}}()
-∇Qis_vt = Dict{Int64, Vector{Vector}}()
+∇Qis_iso = Dict{Int64, Vector{Vector}}()
+∇Qis_isot = Dict{Int64, Vector{Vector}}()
+∇Qis_cov = Dict{Int64, Vector{Vector}}()
+∇Qis_covt = Dict{Int64, Vector{Vector}}()
 
-met_e = Dict{Int64, Dict}()
-met_et = Dict{Int64, Dict}()
-met_v = Dict{Int64, Dict}()
-met_vt = Dict{Int64, Dict}()
+met_iso = Dict{Int64, Dict}()
+met_isot = Dict{Int64, Dict}()
+met_cov = Dict{Int64, Dict}()
+met_covt = Dict{Int64, Dict}()
 
-asis_e = Dict{Int64, Vector{Subspace}}()
-asis_et = Dict{Int64, Vector{Subspace}}()
-asis_v = Dict{Int64, Vector{Subspace}}()
-asis_vt = Dict{Int64, Vector{Subspace}}()
+asis_iso = Dict{Int64, Vector{Subspace}}()
+asis_isot = Dict{Int64, Vector{Subspace}}()
+asis_cov = Dict{Int64, Vector{Subspace}}()
+asis_covt = Dict{Int64, Vector{Subspace}}()
 
 # load IS estimates
 for nprop in nprop_arr
     # gradient of Q
-    ∇Qis_e[nprop] = [JLD.load("$(simdir)/gradQ_IS_EW_nc=$(nprop)/gradQ_ISM_$(iter).jld")["∇Q"][1:1445] for iter = 1:niter]
-    ∇Qis_et[nprop] = [JLD.load("$(simdir)/gradQ_IS_EW_nc=$(nprop)/gradQ_ISM_Temp_$(iter).jld")["∇Q"][1:1445] for iter = 1:niter]
-    ∇Qis_v[nprop] = [JLD.load("$(simdir)/gradQ_IS_VW_nc=$(nprop)/gradQ_ISM_$(iter).jld")["∇Q"][1:1445] for iter = 1:niter]
-    ∇Qis_vt[nprop] = [JLD.load("$(simdir)/gradQ_IS_VW_nc=$(nprop)/gradQ_ISM_Temp_$(iter).jld")["∇Q"][1:1445] for iter = 1:niter]
+    ∇Qis_iso[nprop] = [JLD.load("$(simdir)/gradQ_IS_VW_nc=$(nprop)/gradQ_ISM_$(iter).jld")["∇Q"][1:1445] for iter = 1:niter]
+    ∇Qis_isot[nprop] = [JLD.load("$(simdir)/gradQ_IS_VW_nc=$(nprop)/gradQ_ISM_Temp_$(iter).jld")["∇Q"][1:1445] for iter = 1:niter]
+    ∇Qis_cov[nprop] = [JLD.load("$(simdir)/gradQ_IS_VW_nc=$(nprop)/gradQ_ISM_$(iter+4).jld")["∇Q"][1:1445] for iter = 1:niter]
+    ∇Qis_covt[nprop] = [JLD.load("$(simdir)/gradQ_IS_VW_nc=$(nprop)/gradQ_ISM_Temp_$(iter+4).jld")["∇Q"][1:1445] for iter = 1:niter]
 
     # IS metrics
-    met_e[nprop] = JLD.load("$(simdir)/gradQ_IS_EW_nc=$(nprop)/gradQ_ISM_$(iternum).jld")["metrics"]
-    met_et[nprop] = JLD.load("$(simdir)/gradQ_IS_EW_nc=$(nprop)/gradQ_ISM_Temp_$(iternum).jld")["metrics"]
-    met_v[nprop] = JLD.load("$(simdir)/gradQ_IS_VW_nc=$(nprop)/gradQ_ISM_$(iternum).jld")["metrics"]
-    met_vt[nprop] = JLD.load("$(simdir)/gradQ_IS_VW_nc=$(nprop)/gradQ_ISM_Temp_$(iternum).jld")["metrics"]
+    met_iso[nprop] = JLD.load("$(simdir)/gradQ_IS_VW_nc=$(nprop)/gradQ_ISM_$(iternum).jld")["metrics"]
+    met_isot[nprop] = JLD.load("$(simdir)/gradQ_IS_VW_nc=$(nprop)/gradQ_ISM_Temp_$(iternum).jld")["metrics"]
+    met_cov[nprop] = JLD.load("$(simdir)/gradQ_IS_VW_nc=$(nprop)/gradQ_ISM_$(iternum+4).jld")["metrics"]
+    met_covt[nprop] = JLD.load("$(simdir)/gradQ_IS_VW_nc=$(nprop)/gradQ_ISM_Temp_$(iternum+4).jld")["metrics"]
 
-    asis_e[nprop] = [compute_as(∇Qis, πβ, βdim) for ∇Qis in ∇Qis_e[nprop]]
-    asis_et[nprop] = [compute_as(∇Qis, πβ, βdim) for ∇Qis in ∇Qis_et[nprop]]
-    asis_v[nprop] = [compute_as(∇Qis, πβ, βdim) for ∇Qis in ∇Qis_v[nprop]]
-    asis_vt[nprop] = [compute_as(∇Qis, πβ, βdim) for ∇Qis in ∇Qis_vt[nprop]]
+    asis_iso[nprop] = [compute_as(∇Qis, πβ, βdim) for ∇Qis in ∇Qis_iso[nprop]]
+    asis_isot[nprop] = [compute_as(∇Qis, πβ, βdim) for ∇Qis in ∇Qis_isot[nprop]]
+    asis_cov[nprop] = [compute_as(∇Qis, πβ, βdim) for ∇Qis in ∇Qis_cov[nprop]]
+    asis_covt[nprop] = [compute_as(∇Qis, πβ, βdim) for ∇Qis in ∇Qis_covt[nprop]]
 end
 
 
 # assemble arrays of inputs ############################################################################
 
-∇Qis_arr = [[∇Qis_e[nprop][iternum], ∇Qis_et[nprop][iternum],
-             ∇Qis_v[nprop][iternum], ∇Qis_vt[nprop][iternum]] for nprop in nprop_arr]
+∇Qis_arr = [[∇Qis_iso[nprop][iternum], ∇Qis_isot[nprop][iternum],
+             ∇Qis_cov[nprop][iternum], ∇Qis_covt[nprop][iternum]] for nprop in nprop_arr]
 ∇Qis_arr = reduce(vcat, ∇Qis_arr)
 
-met_arr = [[met_e[nprop], met_et[nprop],
-            met_v[nprop], met_vt[nprop]] for nprop in nprop_arr]
+met_arr = [[met_iso[nprop], met_isot[nprop],
+            met_cov[nprop], met_covt[nprop]] for nprop in nprop_arr]
 met_arr = reduce(vcat, met_arr)
-
-met_v_arr = [[met_v[nprop], met_vt[nprop]] for nprop in nprop_arr]
-met_v_arr = reduce(vcat, met_v_arr)
             
-asis_arr = [[asis_e[nprop], asis_et[nprop],
-             asis_v[nprop], asis_vt[nprop]] for nprop in nprop_arr]
+asis_arr = [[asis_iso[nprop], asis_isot[nprop],
+             asis_cov[nprop], asis_covt[nprop]] for nprop in nprop_arr]
 asis_arr = reduce(vcat, asis_arr)
 asmc = compute_as(∇Qmc, πβ, βdim)
 
 
+
 # plot settings ############################################################################
-col_arr = [:skyblue1, :skyblue1,
-           :gold, :gold,
-           :dodgerblue, :dodgerblue, 
-           :orange, :orange,
-           :dodgerblue4, :dodgerblue4, 
+col_arr = [:dodgerblue4, :dodgerblue4, 
            :orangered3, :orangered3]
 
-ls_arr = reduce(vcat, [[nothing, :dash] for i = 1:6])
-lab_arr = reduce(vcat, ["equal (nλ=$(nprop))", "equal, temp. (nλ=$(nprop))",
-                        "var. (nλ=$(nprop))", "var., temp. (nλ=$(nprop))"] for nprop in nprop_arr)
+ls_arr = reduce(vcat, [[nothing, :dash] for i = 1:2])
+lab_arr = ["iso. kernel", "iso. kernel (temp.)", "cov. kernel", "cov. kernel (temp.)"]
 
 mark_arr = [:hexagon, :hexagon,
             :circle, :circle,
@@ -106,7 +100,6 @@ mark_arr = [:hexagon, :hexagon,
             :rect, :rect,
             :star4, :star4,
             :utriangle, :utriangle]                      
-
 
 # compare gradient calculations ############################################################
 f = plot_error(∇Qmc[1:1445], ∇Qis_arr, col_arr, lab_arr,
@@ -150,7 +143,7 @@ f4 = plot_IS_diag_2D_AS("wvar",
                         asmc.C,
                         πβ,
                         βsamp_2,
-                        cents,
+                        cents_cov,
                         "log Var(w)";
                         logscl=true)
 
@@ -160,7 +153,7 @@ f5 = plot_IS_diag_2D_AS("wESS",
                         asmc.C,
                         πβ,
                         βsamp_2,
-                        centers,
+                        cents_cov,
                         "ESS(w)")
 
 # plot "cdf"
@@ -206,7 +199,7 @@ f8 = plot_pairwise_potential(βsamp_2[1:1000], r, B)
 
 # plot samples with high/low IS weight variance
 ny = 50
-sortid = sortperm(met_v[150]["wvar"], rev=true) # descending order
+sortid = sortperm(met_cov[150]["wvar"], rev=true) # descending order
 hi_err_id = sortid[1:ny]
 lo_err_id = sortid[end-ny:end-1]
 
@@ -214,7 +207,7 @@ f9 = plot_pairwise_potential([βsamp_2[hi_err_id], βsamp_2[lo_err_id]],
                             r, B, [:red, :Green], ["High Var(w)", "Low Var(w)"])
 
 # plot samples with high/low ESS
-sortid = sortperm(met_v[150]["wESS"], rev=true) # descending order
+sortid = sortperm(met_cov[150]["wESS"], rev=true) # descending order
 hi_err_id = sortid[1:ny]
 lo_err_id = sortid[end-ny:end-1]
 
@@ -314,16 +307,6 @@ for k = 1:nsamp
     Q3[k], _, _ = expectation(θysamp[k], q, ISint)
 end
 
-as3 = compute_as(∇Qis_vt[150][end], πβ, 3)
-Qis3 = zeros(nsamp)
-_, θysamp = sample_as(nsamp, as3)
-for k = 1:nsamp
-    Qis3[k], _, _ = expectation(θysamp[k], q, ISint)
-end
-
-JLD.save("$(simdir)QoI_as_modes_Q3.jld", "Q3", Q3, "Qis3", Qis3)
-Q0 = JLD.load("$(simdir)QoI_as_modes.jld")["Q0"]
-
 # from as modes
 Qas = Vector{Vector{Float64}}(undef, βdim)
 
@@ -338,16 +321,14 @@ end
 
 Q4 = JLD.load("$(simdir)QoI_as_modes.jld")["Q4"]
 Qas = JLD.load("$(simdir)QoI_as_modes.jld")["Qas"]
-
+JLD.save("$(simdir)QoI_as_modes_run2.jld", "Q0", Q0, "Q3", Q3, "Qas", Qas)
 bins = LinRange(minimum(Q0), maximum(Q0), 50)
 # plot hist
 with_theme(custom_theme) do
     fig = Figure(resolution=(800, 550))
     ax = Axis(fig[1,1], xlabel="Q", ylabel="count", title="Distribution of Q")
-    # hist!(ax, Q0, bins=bins, color=(:blue, 0.2), label="original sampling density")
-    hist!(ax, Q3, bins=bins, color=(:red, 0.2), label="active subspace (MC)")
-    hist!(ax, Qis3, bins=bins, color=(:Green, 0.2), label="active subspace (IS)")
-
+    hist!(ax, Q0, bins=bins, color=(:blue, 0.2), label="original sampling density")
+    hist!(ax, Q3, bins=bins, color=(:red, 0.2), label="active subspace (3)")
     # hist!(ax, Q4, bins=bins, color=(:Green, 0.2), label="active subspace (4)")
     # hist!(ax, Qas[end], bins=bins, color=(:yellow, 0.2), label="inactive subspace")
     axislegend(ax, position=:rt)
@@ -403,9 +384,9 @@ end
 
 # plot distribution of mixture weights #############################################
 
-figs = Vector{Figure}(undef, length(met_v_arr))
+figs = Vector{Figure}(undef, length(met_cov_arr))
 
-for (i, met) in enumerate(met_v_arr)
+for (i, met) in enumerate(met_cov_arr)
 
     mixwts = reduce(hcat, met["mixwts"])
     ncent, nsamp = size(mixwts)
@@ -457,7 +438,7 @@ fig = Figure(resolution=(600,480))
 ax = Axis(fig[1,1], ylabel="||Pr * ei ||₂", xlabel="ei", xticks=1:βdim, limits=(0, 9, -0.05, 1.05))
 sc = Vector(undef, βdim)
 for tr = 1:βdim
-    Wtrunc = asis_vt[150][1].W1[:, 1:tr] # asmc.W1[:, 1:tr] # 
+    Wtrunc = asis_covt[150][1].W1[:, 1:tr] # asmc.W1[:, 1:tr] # 
     Proj = Wtrunc * Wtrunc'
 
     infl = zeros(βdim)
