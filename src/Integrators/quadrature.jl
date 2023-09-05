@@ -1,16 +1,5 @@
 abstract type QuadIntegrator <: Integrator end
 
-"""
-struct GridIntegration <: QuadIntegrator
-
-Contains parameters for 1D Gauss quadrature integration.
-
-# Arguments
-- `x :: Vector{<:Real}`       : x points at which to evaluate the pdf
-"""
-struct GridIntegration <: QuadIntegrator
-    x :: Vector{<:Real}
-end
 
 """
 struct GaussQuadrature <: QuadIntegrator
