@@ -4,4 +4,4 @@ h(x, θ) = V(x, θ)
 
 
 # define QoI
-q = GibbsQoI(h=h, p=πgibbs)
+q = GibbsQoI(h=h, p=πgibbs1)
