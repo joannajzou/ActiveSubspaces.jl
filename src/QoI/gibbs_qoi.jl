@@ -37,9 +37,8 @@ Evaluates the expectation E_p[h(θ)], where qoi.h(θ) is the random variable and
 # quadrature integration
 function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integrator::GaussQuadrature)
     # fix parameters
-    qoim = GibbsQoI(h = x -> qoi.h(x, θ), p=Gibbs(qoi.p, θ=θ))
-
-    Z = normconst(qoim.p, integrator.ξ, integrator.w)
+    qoim = assign_param(qoi, θ)
+    Z = normconst(qoim.p, integrator)
     h̃(x) = qoim.h(x) * updf(qoim.p, x) / Z
     return sum(integrator.w .* h̃.(integrator.ξ))
 end
@@ -48,8 +47,7 @@ end
 # integration with MCMC samples
 function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integrator::MCMC)
     # fix parameters
-    qoim = GibbsQoI(h = x -> qoi.h(x, θ), p=Gibbs(qoi.p, θ=θ))
-
+    qoim = assign_param(qoi, θ)
     # x samples
     x = rand(qoim.p, integrator.n, integrator.sampler, integrator.ρ0) 
 
@@ -60,8 +58,7 @@ end
 # integration with MC samples provided
 function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integrator::MCSamples)
     # fix parameters
-    qoim = GibbsQoI(h = x -> qoi.h(x, θ), p=Gibbs(qoi.p, θ=θ))
-
+    qoim = assign_param(qoi, θ)
     # x samples
     x = integrator.xsamp
 
@@ -72,79 +69,83 @@ end
 # importance sampling (MCMC sampling)
 function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integrator::ISMCMC)
     # fix parameters
-    qoim = GibbsQoI(h = x -> qoi.h(x, θ), p=Gibbs(qoi.p, θ=θ))
-
+    qoim = assign_param(qoi, θ)
     # x samples
     x = rand(integrator.g, integrator.n, integrator.sampler, integrator.ρ0) 
 
     # compute log IS weights
-    logwt(x) =if hasupdf(integrator.g) # g has an unnormalized pdf
-        logupdf(qoim.p, x) - logupdf(integrator.g, x)
-    else # g does not have an unnormalized pdf
-        logupdf(qoim.p, x) - logpdf(integrator.g, x)
-    end
+    return expectation_is_stable(x, qoim.h, qoim.p, integrator.g)
 
-    M = maximum(logwt.(x))
-    return sum( qoim.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoim.h.(x), exp.(logwt.(x))
+    # logwt(x) =if hasupdf(integrator.g) # g has an unnormalized pdf
+    #     logupdf(qoim.p, x) - logupdf(integrator.g, x)
+    # else # g does not have an unnormalized pdf
+    #     logupdf(qoim.p, x) - logpdf(integrator.g, x)
+    # end
+
+    # M = maximum(logwt.(x))
+    # return sum( qoim.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoim.h.(x), exp.(logwt.(x))
 end
 
 
 # importance sampling (MC sampling)
 function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integrator::ISMC) 
     # fix parameters
-    qoim = GibbsQoI(h = x -> qoi.h(x, θ), p=Gibbs(qoi.p, θ=θ))
-
+    qoim = assign_param(qoi, θ)
     # x samples
     x = rand(integrator.g, integrator.n)
 
-    # compute log IS weights
-    logwt(x) = logupdf(qoim.p, x)  - logpdf(integrator.g, x)
-    M = maximum(logwt.(x))
-    return sum( qoim.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoim.h.(x), exp.(logwt.(x))
+    return expectation_is_stable(x, qoim.h, qoim.p, integrator.g)
+
+    # # compute log IS weights
+    # logwt(x) = logupdf(qoim.p, x)  - logpdf(integrator.g, x)
+    # M = maximum(logwt.(x))
+    # return sum( qoim.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoim.h.(x), exp.(logwt.(x))
 end
 
 
 # importance sampling (samples provided)
 function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integrator::ISSamples) 
     # fix parameters
-    qoim = GibbsQoI(h = x -> qoi.h(x, θ), p=Gibbs(qoi.p, θ=θ))
-        
+    qoim = assign_param(qoi, θ)        
     # x samples
     x = integrator.xsamp
 
-    # compute log IS weights
-    logwt(x) = if hasupdf(integrator.g) # g has an unnormalized pdf
-        logupdf(qoim.p, x) - logupdf(integrator.g, x)
-    else # g does not have an unnormalized pdf
-        logupdf(qoim.p, x) - logpdf(integrator.g, x)
-    end
+    return expectation_is_stable(x, qoim.h, qoim.p, integrator.g; normint = integrator.normint)
 
-    M = maximum(logwt.(x))
-    return sum( qoim.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoim.h.(x), exp.(logwt.(x))
+    # # compute log IS weights
+    # logwt(x) = if hasupdf(integrator.g) # g has an unnormalized pdf
+    #     logupdf(qoim.p, x) - logupdf(integrator.g, x)
+    # else # g does not have an unnormalized pdf
+    #     logupdf(qoim.p, x) - logpdf(integrator.g, x)
+    # end
+
+    # M = maximum(logwt.(x))
+    # return sum( qoim.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoim.h.(x), exp.(logwt.(x))
 end
 
 
 # importance sampling from mixture distribution (samples provided)
 function expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integrator::ISMixSamples) 
     # fix parameters
-    qoim = GibbsQoI(h = x -> qoi.h(x, θ), p=Gibbs(qoi.p, θ=θ))
-        
+    qoim = assign_param(qoi, θ)        
     # draw samples from mixture model
-    _, centers = params(integrator.g)
-    wts = [compute_kernel(θ, c, integrator.knl) for c in centers]
+    # _, centers = params(integrator.g)
+    wts = [compute_kernel(θ, c, integrator.knl) for c in integrator.refs]
     wts = wts ./ sum(wts)
     mm = MixtureModel(integrator.g, wts)
-    x, _ = rand(mm, integrator.n, integrator.xsamp)
+    x, rat = rand(mm, integrator.n, integrator.xsamp)
 
-    # compute log IS weights
-    logwt(x) = if hasupdf(integrator.g) # g has an unnormalized pdf
-        logupdf(qoim.p, x) - logupdf(integrator.g, x)
-    else # g does not have an unnormalized pdf
-        logupdf(qoim.p, x) - logpdf(integrator.g, x)
-    end
+    expec, hsamp, iswts = expectation_is_stable(x, qoim.h, qoim.p, integrator.g, normint=integrator.normint)
+    return expec, hsamp, iswts, wts
+    # # compute log IS weights
+    # logwt(x) = if hasupdf(integrator.g) # g has an unnormalized pdf
+    #     logupdf(qoim.p, x) - logupdf(integrator.g, x)
+    # else # g does not have an unnormalized pdf
+    #     logupdf(qoim.p, x) - logpdf(integrator.g, x)
+    # end
 
-    M = maximum(logwt.(x))
-    return sum( qoim.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoim.h.(x), exp.(logwt.(x))
+    # M = maximum(logwt.(x))
+    # return sum( qoim.h.(x) .* exp.(logwt.(x) .- M) ) / sum( exp.(logwt.(x) .- M) ), qoim.h.(x), exp.(logwt.(x)), wts
 end
 
 
@@ -185,6 +186,26 @@ function grad_expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integr
 end
 
 
+function grad_expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integrator::ISMixSamples; gradh::Union{Function, Nothing}=nothing)
+    # compute gradient of h
+    if gradh === nothing
+        ∇θh = (x, γ) -> ForwardDiff.gradient(γ -> qoi.h(x,γ), γ)
+    else
+        ∇θh = (x, γ) -> gradh(x, γ)
+    end
+
+    # compute inner expectation E_p[∇θV]
+    E_qoi = GibbsQoI(h=qoi.p.∇θV, p=qoi.p)
+    E_∇θV, _, _, _ = expectation(θ, E_qoi, integrator) # for ISIntegrator
+
+    # compute outer expectation
+    hh(x, γ) = ∇θh(x, γ) - qoi.p.β * qoi.h(x, γ) * (qoi.p.∇θV(x, γ) - E_∇θV)
+    hh_qoi = GibbsQoI(h=hh, p=qoi.p)
+    return expectation(θ, hh_qoi, integrator)
+
+end
+
+
 function grad_expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integrator::Integrator; gradh::Union{Function, Nothing}=nothing)
     # compute gradient of h
     if gradh === nothing
@@ -202,4 +223,22 @@ function grad_expectation(θ::Union{Real, Vector{<:Real}}, qoi::GibbsQoI, integr
     hh_qoi = GibbsQoI(h=hh, p=qoi.p)
     return expectation(θ, hh_qoi, integrator)
 
+end
+
+function assign_param(qoi::GibbsQoI, θ::Vector)
+    return GibbsQoI(h = x -> qoi.h(x, θ), p=Gibbs(qoi.p, θ=θ))
+end
+
+
+function expectation_is_stable(xsamp::Vector, ϕ::Function, f::Gibbs, g::Distribution; normint=nothing)
+    logwt(xsamp) = if hasupdf(g) # Gibbs biasing dist
+        logupdf.((f,), xsamp) .- logupdf.((g,), xsamp)
+    elseif hasapproxnormconst(g) # mixture biasing dist
+        logupdf.((f,), xsamp) .- logpdf(g, xsamp, normint)
+    else # other biasing dist from Distributions.jl
+        logupdf.((f,), xsamp) .- logpdf.((g,), x)
+    end
+
+    M = maximum(logwt(xsamp))
+    return sum( ϕ.(xsamp) .* exp.(logwt(xsamp) .- M) ) / sum( exp.(logwt(xsamp) .- M) ), ϕ.(xsamp), exp.(logwt(xsamp))
 end
