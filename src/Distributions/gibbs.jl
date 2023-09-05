@@ -52,32 +52,34 @@ end
 params(d::Gibbs) = (d.β, d.θ)
 
 # 1 - random sampler
-function rand(d::Gibbs, n::Int, sampler::Sampler, ρ0::Distribution; burn=0.1)
-    nsim = Int(ceil((1+burn) * n))
+function rand(d::Gibbs, n::Int, sampler::Sampler, ρ0::Distribution; burn=1000)
+    nsim = Int(burn + n)
     lπ = x -> logupdf(d, x)
     gradlπ = x -> gradlogpdf(d, x)
     xsamp = sample(lπ, gradlπ, sampler, nsim, rand(ρ0))
-    return xsamp[(nsim - n + 1):end]
+    return xsamp[(burn+1):end]
 end
 
-function rand(d::Gibbs, n::Int, sampler::Sampler, x0::Vector; burn=0.1)
-    nsim = Int(ceil((1+burn) * n))
+function rand(d::Gibbs, n::Int, sampler::Sampler, x0::Vector; burn=1000)
+    nsim = Int(burn + n)
     lπ = x -> logupdf(d, x)
     gradlπ = x -> gradlogpdf(d, x)
     xsamp = sample(lπ, gradlπ, sampler, nsim, x0)
-    return xsamp[(nsim - n + 1):end]
+    return xsamp[(burn+1):end]
 end
 
-# 2 - unnormalized pdf
+# 2 - pdf
 updf(d::Gibbs, x) = exp(-d.β * d.V(x))
+pdf(d::Gibbs, x, integrator::Integrator) = updf(d, x) ./ normconst(d, integrator)
 
 # 3 - normalization constant (partition function)
-function normconst(d::Gibbs, ξ::Vector, w::Vector)
-    return sum(w' * updf.((d,), ξ))
+function normconst(d::Gibbs, integrator::QuadIntegrator)
+    return sum(integrator.w' * updf.((d,), integrator.ξ))
 end
 
 # 4 - log unnormalized pdf
 logupdf(d::Gibbs, x) = -d.β * d.V(x)
+logpdf(d::Gibbs, x, integrator::Integrator) = logupdf(d, x) - log(normconst(d, integrator))
 
 # 5 - gradlogpdf (wrt x)
 gradlogpdf(d::Gibbs, x) = -d.β * d.∇xV(x)

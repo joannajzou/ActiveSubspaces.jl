@@ -13,17 +13,15 @@ Returns 'true' if distribution d has an unnormalized pdf function (updf(), logup
 - `flag :: Bool`        : true or false
 
 """
-function hasupdf(d::Gibbs)
-    return true
-end
+hasupdf(d::Gibbs) = true
 
-function hasupdf(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs})
-    return true
-end
+hasupdf(d::Distribution) = false
 
-function hasupdf(d::Distribution)
-    return false
-end
+hasapproxnormconst(d::Gibbs) = true
+
+hasapproxnormconst(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs}) = true
+
+# pdf(d::Distribution, x, integrator::Nothing) = pdf(d, x)
 
 
-export Gibbs, Gibbs!, params, updf, logupdf, normconst, gradlogpdf, hasupdf
+export Gibbs, Gibbs!, params, updf, logupdf, normconst, gradlogpdf, hasupdf, hasapproxnormconst
