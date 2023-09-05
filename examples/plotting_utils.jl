@@ -490,7 +490,7 @@ function plot_parameter_study(πβ::Distribution, n::Int64, r::Vector, B::Vector
 
         # compute sampling density
         μy = W1' * πβ.μ
-        Σy = Hermitian(W1' * πβ.Σ * W1)
+        Σy = 100*Hermitian(W1' * πβ.Σ * W1)
         π_y = MvNormal(μy, Σy)
 
         # draw samples

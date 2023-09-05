@@ -31,11 +31,11 @@ include("DataProcessing/dataprocessing.jl")
 # functions for MCMC sampling from distributions
 include("Sampling/sampling.jl")
 
-# functions for defining generic distributions
-include("Distributions/distributions.jl")
-
 # functions for defining integration method and parameters
 include("Integrators/integrators.jl")
+
+# functions for defining generic distributions
+include("Distributions/distributions.jl")
 
 # functions for computing expectations (QoIs)
 include("QoI/qoi.jl")

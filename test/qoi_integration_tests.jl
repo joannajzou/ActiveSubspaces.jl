@@ -6,9 +6,9 @@ using Test
 @testset "computing QoIs" begin
 
     # test case
-    V(x, θ) = (θ[1] * x.^2) / 2 - (θ[2] * x.^4) / 4 - 1 # with neg sign
-    ∇xV(x, θ) = θ[1] * x - θ[2] * x.^3
-    ∇θV(x, θ) = [x^2 / 2, -x^4 / 4]
+    V(x, θ) = - (θ[1] * x.^2) / 2 + (θ[2] * x.^4) / 4 + 1
+    ∇xV(x, θ) = - θ[1] * x + θ[2] * x.^3
+    ∇θV(x, θ) = [-x^2 / 2, x^4 / 4]
 
     πgibbs = Gibbs(V=V, ∇xV=∇xV, ∇θV=∇θV, β=1.0)
     q = GibbsQoI(h=V, p=πgibbs)
