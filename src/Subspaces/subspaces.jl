@@ -344,4 +344,4 @@ Samples from the active subspace by marginalization over inactive variables.
 # end
 
 
-export Subspace, compute_covmatrix, compute_eigenbasis, find_subspaces, compute_as, sample_as, transf_to_paramspace_fix, transf_to_subspace
+export Subspace, compute_covmatrix, compute_eigenbasis, find_subspaces, compute_marginal, compute_as, sample_as, transf_to_paramspace_fix, transf_to_subspace
