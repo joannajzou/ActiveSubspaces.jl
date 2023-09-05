@@ -1,13 +1,18 @@
 function import_data(dir::String, IntType::String, nsamp_arr::Vector{Int64}, nrepl::Int64; nsamptot::Int64=nsamp_arr[end])
     Cdict = Dict{Int64, Vector{Matrix{Float64}}}()
-    
-    for (k,nsamp) in zip(1:length(nsamp_arr), nsamp_arr)
+
+    # initialize dict
+    for nsamp in nsamp_arr
         Cdict[nsamp] = Vector{Matrix{Float64}}(undef, nrepl)
-        for j = 1:nrepl
-            Cj = JLD.load("$(dir)/repl$j/DW1D_$(IntType)_nsamp=$nsamptot.jld")["C"]
-            Ckeys = collect(keys(Cj))
-            Cdict[nsamp][j] = Cj[Ckeys[k]]
+    end
+        
+    for j = 1:nrepl
+        Cj = JLD.load("$(dir)/repl$j/DW1D_$(IntType)_cov_nsamp=$nsamptot.jld")["C"]
+        
+        for nsamp in nsamp_arr
+            Cdict[nsamp][j] = Cj[nsamp]
         end
+
     end
 
     return Cdict
@@ -32,7 +37,7 @@ end
 
 function compute_val(Cref::Matrix{Float64}, Cdict::Dict, rdim::Int64)
     # extract values
-    nsamp_arr = collect(keys(Cdict))
+    nsamp_arr = sort(collect(keys(Cdict)))
     
     # compute eigenvalues and eigenvectors
     _, λref, _ = compute_eigenbasis(Cref)
