@@ -3,6 +3,11 @@ include("qoi_meanenergy.jl")
 include("mc_utils.jl")
 # include("plotting_utils.jl")
 
+Temp = 72.0
+Temp_b = 150.0        # higher temp for biasing dist.    
+Tempscl = Temp / Temp_b
+biasdir = "$(simdir)Temp_$(Temp_b)/"
+
 
 # load data #####################################################################################
 # coeff distribution
@@ -10,30 +15,39 @@ include("mc_utils.jl")
 Σ = JLD.load("$(simdir)coeff_distribution.jld")["Σ"]
 πβ = MvNormal(μ, Σ)
 βdim = length(μ)
+
 # coeff samples
-βsamp = JLD.load("$(simdir)coeff_samples_1-500.jld")["βsamp"]
+βsamp = JLD.load("$(simdir)coeff_samples_aug.jld")["βsamp"]
 nsamp = length(βsamp)
+
+# biasing distribution samples
+λsamp = JLD.load("$(biasdir)coeff_samples.jld")["βsamp"]
+nλ = length(λsamp)
+
+βaug = reduce(vcat, (βsamp_2, λsamp_2))
+JLD.save("$(simdir)coeff_samples_aug.jld", "βsamp", βaug)
 
 
 # Monte Carlo - standard ########################################################################
-∇Qmc, idskip = compute_gradQ(βsamp, q, simdir; gradh=∇h) 
-JLD.save("$(simdir)coeff_skip.jld", "id_skip", idskip)
-# idskip = JLD.load("$(simdir)coeff_skip.jld")["id_skip"]
+∇Qmc, idskip = compute_gradQ(λsamp_2, q, simdir; gradh=∇h) 
+∇Qmc, idskip = compute_gradQ(βsamp_c, q, biasdir; gradh=∇h) 
+# JLD.save("$(biasdir)coeff_skip.jld", "id_skip", idskip)
 
 # remove skipped indices
-# idkeep = symdiff(1:nsamp, idskip)
-# βsamp_2 = βsamp[idkeep]
+idskip = JLD.load("$(simdir)coeff_skip.jld")["id_skip"]
+idkeep_β = symdiff(1:nsamp, idskip)
+βsamp_2 = βsamp[idkeep_β]
+
+idskip = JLD.load("$(biasdir)coeff_skip.jld")["id_skip"]
+idkeep = symdiff(1:nλ, idskip)
+λsamp_2 = λsamp[idkeep]
 
 
 # importance sampling - single distribution #####################################################
 # πg = Gibbs(πgibbs, θ=πβ.μ)
+
 # # compute descriptors 
-# ds = load_data("$(simdir)coeff_nom/data.xyz", ExtXYZ(u"eV", u"Å"))
-# e_descr = compute_local_descriptors(ds, ace)
-# Φsamp = sum.(get_values.(e_descr))
-# JLD.save("$(simdir)coeff_nom/global_energy_descriptors_nontemp.jld", "Φsamp", Φsamp)
-# # or load
-# # Φsamp = JLD.load("$(simdir)coeff_nom/global_energy_descriptors.jld")["Φsamp"]
+# Φsamp = JLD.load("$(simdir)coeff_mean/energy_descriptors.jld")["Bsamp"]
 
 # # define integrator
 # ISint = ISSamples(πg, Φsamp)
@@ -41,57 +55,91 @@ JLD.save("$(simdir)coeff_skip.jld", "id_skip", idskip)
 # # compute
 # ∇Qis, metrics = compute_gradQ(βsamp_2, q, ISint; gradh=∇h)
 
-# JLD.save("$(simdir)gradQ_meanenergy_IS_all_84.jld", "∇Q", ∇Qis)
-# JLD.save("$(simdir)metrics_84.jld", "metrics", metrics)
+# JLD.save("$(simdir)gradQ_meanenergy_IS_single.jld",
+#     "∇Q", ∇Qis,
+#     "metrics", metrics)
 
 
 # importance sampling - mixture distribution, equal weights #############################################
 # randomly sample component PDFs
-# nprop = 100
-# nMC = 10000
-# centers = reduce(vcat, ([πβ.μ], βsamp_2[2:nprop]))
-# # sample from component PDFs
-# # for i = 1:nprop
-# #     if i == 1; num = "nom"; else; num = idkeep[i]; end
-# #     ds = load_data("$(simdir)coeff_$num/data.xyz", ExtXYZ(u"eV", u"Å"))
-# #     e_descr = compute_local_descriptors(ds, ace)
-# #     Φsamp = sum.(get_values.(e_descr))
-# #     JLD.save("$(simdir)coeff_$num/global_energy_descriptors.jld", "Φsamp", Φsamp)
 
-# #     # check quality of samples
-# #     plot_mcmc_trace(Φsamp)
-# #     plot_mcmc_autocorr(Φsamp)
-# # end
-
-# # load from file
-# samp_all = Vector(undef, nprop)
-# for i = 1:nprop
-#     if i == 1; num = "nom"; else; num = idkeep[i]; end
-#     Φsamp = JLD.load("$(simdir)coeff_$num/global_energy_descriptors.jld")["Φsamp"][200:end]
-#     samp_all[i] = Φsamp
-# end
-
-# # define mixture model
-# πg = [Gibbs(πgibbs, θ=c) for c in centers]
-# mm = MixtureModel(πg)
-
-# # # draw fixed set of samples
-# # Φsamp_mix, catratio = rand(mm, nMC, samp_all)
-# # ISint = ISSamples(mm, Φsamp_mix)
-
-# # # compute
-# # ∇Qis, metrics = compute_gradQ(βsamp_2[1:10], q, ISint; gradh=∇h)
-
-# # JLD.save("$(simdir)gradQ_meanenergy_IS_all_mix_equalwts.jld", "∇Q", ∇Qis)
-# # JLD.save("$(simdir)metrics_mix_equalwts.jld", "metrics", metrics)
+nprop_arr = [50, 100, 150]
+nprop_tot = nprop_arr[end]
+nMC = 10000
+knl = RBF(Euclidean(βdim); ℓ=1e-8) # RBF(Euclidean(inv(Σ)); ℓ=1)
 
 
-# # importance sampling - mixture distribution, var. weights #############################################
-# knl = RBF(Euclidean(βdim); ℓ=1e-7)
-# ISint = ISMixSamples(mm, nMC, knl, samp_all)
 
-# # compute
-# ∇Qis, metrics = compute_gradQ(βsamp_2, q, ISint; gradh=∇h)
+for iter = 1:4
+    println("======================== ITER $iter ========================")
+    t = @elapsed begin
+        centers = JLD.load("$(simdir)/gradQ_IS_EW_nc=150/gradQ_ISM_Temp_$(iter+4).jld")["centers"]
+        center_ids = intersection_indices(centers, βsamp_c)
+        # center_ids = rand(idkeep, nprop_tot)
 
-# JLD.save("$(simdir)gradQ_meanenergy_IS_all_mix_varwts.jld", "∇Q", ∇Qis)
-# JLD.save("$(simdir)metrics_mix_varwts.jld", "metrics", metrics)
+        # load from file
+        samp_all = Vector{Vector}(undef, nprop_tot)
+        for i = 1:nprop_tot
+            num = center_ids[i]+500
+            Φsamp = JLD.load("$(biasdir)coeff_$num/energy_descriptors.jld")["Bsamp"]
+            samp_all[i] = Φsamp
+        end
+    end
+    println("overhead: $t sec.")
+
+    for nprop in nprop_arr
+        println("----------- nprop $nprop -----------")
+
+        centers = βsamp_c[center_ids[1:nprop]]
+        samps = samp_all[1:nprop]
+
+        # define mixture model
+        πgibbs2 = Gibbs(πgibbs, β=Tempscl)
+        πg = [Gibbs(πgibbs2, θ=c) for c in centers]
+        mm = MixtureModel(πg)
+
+        # draw fixed set of samples
+        Φsamp_mix, catratio = rand(mm, nMC, samps)
+        ISint = ISSamples(mm, Φsamp_mix)
+        
+        
+        # compute with equal mixture weights
+        println("COMPUTE GRAD Q - EQUAL WTS")
+        ∇Qis, metrics = compute_gradQ(βsamp_2, q, ISint; gradh=∇h)
+
+        JLD.save("$(simdir)/gradQ_IS_EW_nc=$(nprop)/gradQ_ISM_Temp_$(iter).jld",
+            "∇Q", ∇Qis,
+            "centers", centers,
+            "metrics", metrics)
+
+        # compute with variable mixture weights
+        ISmix = ISMixSamples(mm, nMC, knl, samps)
+
+        println("COMPUTE GRAD Q - VAR WTS")
+        ∇Qis_m, metrics_m = compute_gradQ(βaug[1:1], q, ISmix; gradh=∇h)
+
+        JLD.save("$(simdir)/gradQ_IS_VW_nc=$(nprop)/gradQ_ISM_Temp_$(iter).jld",
+            "∇Q", ∇Qis_m,
+            "centers", centers,
+            "metrics", metrics_m)
+
+    end
+end
+
+
+
+
+
+
+function intersection_indices(arr1, arr2)
+    indices = Int[]
+
+    for (index, value) in enumerate(arr1)
+        id2 = findall(x -> x == value, arr2)
+        if !isempty(id2)
+            push!(indices, id2[1])
+        end
+    end
+
+    return indices
+end
