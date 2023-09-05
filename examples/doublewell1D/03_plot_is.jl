@@ -5,7 +5,7 @@ using StatsBase
 using JLD
 
 # select model
-modnum = 3
+modnum = 4
 include("model_param$modnum.jl")
 
 # select qoi
@@ -25,8 +25,8 @@ nrepl = 5
 
 ## covariance matrices
 # A) load by file
-# Cref = JLD.load("data$modnum/DW1D_Ref.jld")["Cref"]
-Cref = JLD.load("data$modnum/DW1D_Ref_MC_nsamp=20000.jld")["C"]
+Cref = JLD.load("data$modnum/DW1D_Ref.jld")["Cref"]
+# Cref = JLD.load("data$modnum/DW1D_Ref_MC_nsamp=20000.jld")["C"]
 Cmc = import_data("data$modnum", "MC", nsamp_arr, nrepl; nsamptot=nsamptot)
 # Cis_u = import_data("data$modnum", "ISU", nsamp_arr, nrepl; nsamptot=nsamptot)
 Cis_g1 = import_data("data$modnum", "ISG", nsamp_arr, nrepl, βarr[1]; nsamptot=nsamptot)
