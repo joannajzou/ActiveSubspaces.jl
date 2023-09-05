@@ -95,7 +95,7 @@ for j = 1:nrepl
         t = @elapsed ∇Qis_i, metrics_i = compute_gradQ(θsamp, q, ISint; gradh=∇h)
         CIS[ncent] = compute_covmatrix(∇Qis_i, nsamp_arr)
         metrics[ncent] = metrics_i
-        println("IS MC Mixture (ncent=$ncent): $t sec.")ß
+        println("IS MC Mixture (ncent=$ncent): $t sec.")
     
     end
 
