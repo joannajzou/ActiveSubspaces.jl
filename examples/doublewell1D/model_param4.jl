@@ -16,7 +16,7 @@ V(x, θ) = 9*x^2 - exp(θ[1])*x^3 + exp(θ[2])*x^4
 # define sampling density for θ
 d = 2
 μθ = [log(18), log(9)] # [log(16), log(24), log(9)]
-Σθ = Diagonal([2e-3, 5e-3]) # *I(d)
+Σθ = 1e-3 * I(d) # Diagonal([2e-3, 5e-3]) 
 ρθ = MvNormal(μθ, Σθ)                           # prior on θ 
 
 # define x-domain

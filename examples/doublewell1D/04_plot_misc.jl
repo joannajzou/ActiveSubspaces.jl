@@ -44,7 +44,7 @@ colscheme = [RGB((i-1)*0.7/N, 0.3 + (i-1)*0.7/N, 0.6 + (i-1)*0.2/N) for i = 1:N]
 
 # random samples from sampling density
 θsamp = [rand(ρθ) for i = 1:100]
-g = plot_gibbs_pdf(θsamp, πgibbs0, xplot, ξx, wx, ttl="Random samples from ρ(θ)")
+g = plot_gibbs_pdf(θsamp, πgibbs0, xplot, GQint, ttl="Random samples from ρ(θ)")
 
 # vary each parameter independently
 figs = Vector{Figure}(undef, d)
@@ -68,7 +68,7 @@ for i = 1:d
     ρmod = MvNormal(ρθ.μ[Not(i)], ρθ.Σ[Not(i),Not(i)])
     θmat[:,Not(i)] = rand(ρmod, M)'
     θsamp = [θmat[j,:] for j = 1:M]
-    figs2[i] = plot_gibbs_pdf(θsamp, πgibbs0, xplot, ξx, wx, ttl="Random samples with fixed θ$i")
+    figs2[i] = plot_gibbs_pdf(θsamp, πgibbs0, xplot, GQint, ttl="Random samples with fixed θ$i")
     # save("figures/samples_th$i_param$modnum.png", fb)
 end
 
@@ -80,7 +80,7 @@ end
 # θsamp = [[i,8-i] for i = 2:0.5:6]
 # θsamp = [[8-i,i] for i = 2:0.5:6]
 # θsamp = [[i,j] for i = 2:0.5:6]
-fd = plot_gibbs_pdf(θsamp, πgibbs0, xplot, ξx, wx, colscheme)
+fd = plot_gibbs_pdf(θsamp, πgibbs0, xplot, GQint, col=colscheme)
 
 
 
@@ -104,7 +104,7 @@ se_bm = Vector{Float64}(undef, nθ)
 for n = 1:nθ
     πgn = Gibbs(πgibbs1, θ=θsamp[n])
     xsamp = rand(πgn, 20000, nuts, ρx0)
-    figs[n] = plot_pdf_with_sample_hist(πgn, xplot, xsamp, ξx=ξx, wx=wx)
+    figs[n] = plot_pdf_with_sample_hist(πgn, xplot, xsamp)
     figs2[n] = plot_mcmc_trace(Matrix(xsamp[:,:]'))
 
     qoim = GibbsQoI(h = x -> q.h(x, θsamp[n]), p=Gibbs(q.p, θ=θsamp[n]))
@@ -116,15 +116,17 @@ ax = Axis(f[1,1])
 scatterlines!(ax, 1:(d*N), se_bm)
 f
 
+# mixture biasing distribution
 t = 14
 # idx = reduce(vcat, [Vector(1:t), Vector((2*N-t):2*N)])
 # idx = Vector((N-t):(N+t))
-idx = Vector((t-2):(t+2))
-idx = [1,9]
+# idx = Vector((t-2):(t+2))
+# idx = [1,9]
 mm = MixtureModel([Gibbs(πgibbs1, θ=θn) for θn in θsamp])
 # xsamp_mm,_ = rand(mm, 100000, samps)
 xsamp_mm = rand(mm, 20000, nuts, ρx0)
 plot_pdf_with_sample_hist(mm, xplot, xsamp_mm)
+
 
 
 function obj_mcmc_tuning(params::Vector)
