@@ -49,9 +49,11 @@ function rand(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs}
     xsamp = Float64[]
     for i = 1:ncomponents(d)
         ni = length(findall(x -> x == i, categories))
-        nsim = burn + ni
-        xi = rand(component(d, i), nsim, sampler, ρ0; burn=0) 
-        append!(xsamp, rand(xi[(burn+1):end], ni))
+        if ni != 0
+            nsim = burn + ni
+            xi = rand(component(d, i), nsim, sampler, ρ0; burn=0) 
+            append!(xsamp, rand(xi[(burn+1):end], ni))
+        end
     end
     return xsamp
 end 
