@@ -195,7 +195,7 @@ function update_dist_params(λsamp::Vector,
         end
 
         @time res = optimize(entlog, λsamp[j], NelderMead(),
-                 Optim.Options(show_trace=true, f_tol=1e-4, g_tol=1e-6, f_calls_limit=100)) # ; autodiff = :forward)
+                 Optim.Options(f_tol=1e-4, g_tol=1e-6, f_calls_limit=100)) # ; autodiff = :forward)
 
         λopt[j] = Optim.minimizer(res)
     end
