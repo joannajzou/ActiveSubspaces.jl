@@ -293,14 +293,14 @@ function gradent!(G, λ::Vector, ϕ::Function, πg::Distribution, integrator::IS
 end
 
 
-function integrand(x::Real, θ::Vector, V::Function, π0::Gibbs, ξx::Vector, wx::Vector; β=1.0)
+function integrand(x::Real, θ::Vector, V::Function, π0::Gibbs, integrator::Integrator; β=1.0)
     πg = Gibbs(π0, β=β, θ=θ)
-    return abs(V(x, θ)) * updf(πg, x) ./ normconst(πg, GQint)
+    return abs(V(x, θ)) * updf(πg, x) ./ normconst(πg, integrator)
 end
 
-function integrand(x::Vector{<:Real}, θ::Vector, V::Function, π0::Gibbs, ξx::Vector, wx::Vector; β=1.0)
+function integrand(x::Vector{<:Real}, θ::Vector, V::Function, π0::Gibbs, integrator::Integrator; β=1.0)
     πg = Gibbs(π0, β=β, θ=θ)
-    return abs.(V.(x, (θ,))) .* updf.((πg,), x) ./ normconst(πg, GQint)
+    return abs.(V.(x, (θ,))) .* updf.((πg,), x) ./ normconst(πg, integrator)
 end
 
 

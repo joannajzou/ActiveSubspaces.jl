@@ -17,20 +17,20 @@ include("mc_utils.jl")
 include("adaptive_is_utils.jl")
 
 # specify sample sizes and number of replications for simulation ##################################
-nsamp_arr = [10] # [625, 1250, 2500, 5000] # 4000, 8000]            # sample sizes
-nrepl = 1                                      # number of replications per sample size
+nsamp_arr = [1000, 2000, 4000, 8000]            # sample sizes
+nrepl = 5                                      # number of replications per sample size
         
 println(nsamp_arr)
 println("nrepl = $nrepl")
 
 
 # compute reference covariance matrix ############################################################
-# Cref = compute_covmatrix_ref((ξθ, wθ), q, ρθ, GQint)
+Cref = compute_covmatrix_ref((ξθ, wθ), q, ρθ, GQint)
 
-# JLD.save("data$modnum/DW1D_Ref.jld",
-#         "ngrid", ngrid,
-#         "Cref", Cref,
-#     )
+JLD.save("data$modnum/DW1D_Ref.jld",
+        "ngrid", ngrid,
+        "Cref", Cref,
+    )
 
 
 # run MC trials ##################################################################################
@@ -140,7 +140,7 @@ for j = 1:nrepl
     E_∇θV = expectation(ρθ.μ, E_qoi, GQint)
     hgrad(x, γ) = ∇θV(x, γ) -  V(x, γ) * (∇θV(x, γ) - E_∇θV)
     qgrad = GibbsQoI(h=hgrad, p=q.p)
-    λset = adapt_mixture_biasing_dist(λsamp, qgrad, πgibbs2; niter=4)
+    λset = adapt_mixture_biasing_dist(λsamp, qgrad, πgibbs2; niter=3)
 
     # equal weights
     mm = MixtureModel(λset[end], πgibbs2)
@@ -170,7 +170,7 @@ for j = 1:nrepl
 
 
     ### adapted centers and weights ###
-    λset, αset = adapt_mixture_biasing_dist_with_wts(λsamp, qgrad, πgibbs2; niter=4)
+    λset, αset = adapt_mixture_biasing_dist_with_wts(λsamp, qgrad, πgibbs2; niter=3)
 
     mm = MixtureModel(λset[end], πgibbs2, αset[end])
 

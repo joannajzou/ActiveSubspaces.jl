@@ -115,7 +115,7 @@ function plot_parameter_space(θ1rng::Vector, θ2rng::Vector, Q::Matrix, P::Matr
         fig = Figure(resolution = (900, 600))
         ax1 = Axis(fig[1, 1][1, 1], xlabel="θ₁", ylabel="θ₂", title="Parameter space")
         # QoI distribution
-        hm = heatmap!(ax1, θ1rng, θ2rng, Q, colorrange=(-300, 1)) 
+        hm = heatmap!(ax1, θ1rng, θ2rng, Q) # colorrange=(-300, 1)
         # contours of ρ(θ)
         contour!(ax1, θ1rng, θ2rng, P, color=(:white, 0.5), linewidth=2) #  levels=0:0.1:0.8) # exp.(LinRange(log(1e-3), log(1), 8))
         # random samples from ρ(θ)

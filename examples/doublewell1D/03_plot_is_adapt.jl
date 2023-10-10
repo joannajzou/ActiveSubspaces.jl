@@ -13,17 +13,18 @@ include("qoi_meanenergy.jl")
 
 # load utils
 include("data_utils.jl")
+include("adaptive_is_utils.jl")
 include("plotting_utils.jl")
 
 
 
 # load data ##############################################################################
-nsamp_arr = [625, 1250, 2500, 5000]
+nsamp_arr = [1000, 2000, 4000, 8000] # [625, 1250, 2500, 5000]
 nsamptot = nsamp_arr[end]
 neff = nsamptot
-nrepl = 5
+nrepl = 4
 
-triallbls = ["MC", "ISM", "ISMw", "ISMa", "ISMaw"]
+triallbls = ["MC", "ISM", "ISMa", "ISMaw"]
 ## covariance matrices
 # A) load by file
 Cref = JLD.load("data$modnum/DW1D_Ref.jld")["Cref"]
@@ -34,7 +35,7 @@ C_arr = [import_data("data$modnum", lbl, nsamp_arr, nrepl; nsamptot=nsamptot) fo
 
 
 # gradients 
-repl = 1
+repl = 2
 ∇Qref = JLD.load("data$modnum/repl$repl/DW1D_Quad_grad_nsamp=$nsamptot.jld")["∇Q"][1:neff]
 ∇Q_arr = [JLD.load("data$modnum/repl$repl/DW1D_$(lbl)_grad_nsamp=$nsamptot.jld")["∇Q"][1:neff] for lbl in triallbls]
 
@@ -43,6 +44,7 @@ met_arr = [JLD.load("data$modnum/repl$repl/DW1D_$(lbl)_cov_nsamp=$nsamptot.jld")
 θsamp = met_arr[1]["θsamp"]
 
 # active subspaces 
+asref = compute_as(Cref, ρθ, 1)
 asis_arr = [compute_as(∇Q, ρθ, 1) for ∇Q in ∇Q_arr]
 
 
@@ -53,8 +55,12 @@ mmu = MixtureModel(λu, πgibbs2)
 λa = JLD.load("data$modnum/repl$repl/DW1D_ISMa_cov_nsamp=$(nsamptot).jld")["mm_cent"][end]
 # αa = JLD.load("data$modnum/repl$repl/DW1D_ISaM_nsamp=$(nsamptot).jld")["mm_wts"][end]
 mma = MixtureModel(λa, πgibbs2) # αa)
+λaw = JLD.load("data$modnum/repl$repl/DW1D_ISMaw_cov_nsamp=$(nsamptot).jld")["mm_cent"][end]
+# αa = JLD.load("data$modnum/repl$repl/DW1D_ISaM_nsamp=$(nsamptot).jld")["mm_wts"][end]
+mmaw = MixtureModel(λa, πgibbs2) 
+biasdist = [mmu, mma, mmaw]
 
-biasdist = [mmu, mma]
+λadapt = JLD.load("data$modnum/repl$repl/DW1D_ISMaw_cov_nsamp=$(nsamptot).jld")["mm_cent"]
 
 
 # compute error metrics ################################################################
@@ -64,10 +70,10 @@ val_arr = [compute_val(Cref, C, 1) for C in C_arr]
 
 
 # define labels ###########################################################################
-lab_arr = ["Ref.", "MC", "Mixture", "Mixture (v)", "Mixture (a)", "Mixture (av)"]
+lab_arr = ["Ref.", "MC", "Mixture", "Mixture (a)", "Mixture (aw)"]
 # lab_arr = ["Ref.", "MC", "Gibbs", "Mixture", "Mixture (adapt.)"]
 # lab_bias_arr = ["Gibbs, β=0.005", "Gibbs, β=0.5", "Gibbs, β=1.0", "Mixture, β=0.5"]
-lab_bias_arr = ["Mixture", "Mixture (v)", "Mixture (a)", "Mixture (av)"]
+lab_bias_arr = ["Mixture", "Mixture (a)", "Mixture (aw)"]
 col_arr = [:mediumpurple1, :skyblue1, :seagreen, :goldenrod1, :darkorange2]
 
 
@@ -76,16 +82,16 @@ col_arr = [:mediumpurple1, :skyblue1, :seagreen, :goldenrod1, :darkorange2]
 # plot pdfs
 plot_multiple_pdfs(biasdist,
                     Vector(xplot),
-                    lab_bias_arr[[1,3]],
-                    col_arr[[2,4]],
+                    lab_bias_arr[1:3],
+                    col_arr[2:4],
                     normint = GQint,
                     ttl="Importance sampling biasing distributions")
 # save("figures/biasingdist.png", fig)
 
 
 # plot locations on parameter space
-θ1_rng = log.(Vector(LinRange(exp.(θbd[1][1]), exp.(3.8), 51))) # θbd[1][2]
-θ2_rng = log.(Vector(LinRange(exp.(θbd[2][1]), exp.(3.1), 51))) # θbd[2][2]
+θ1_rng = log.(Vector(LinRange(exp.(θbd[1][1]), exp.(θbd[1][2]), 51))) # exp.(3.8) θbd[1][2]
+θ2_rng = log.(Vector(LinRange(exp.(θbd[2][1]), exp.(θbd[2][2]), 51))) # exp.(3.1) θbd[2][2]
 # θ1_rng = Vector(LinRange(θbd[1][1], θbd[1][2], 31))
 # θ2_rng = Vector(LinRange(θbd[2][1], θbd[2][2], 31))
 m = length(θ1_rng)
@@ -120,6 +126,28 @@ for j = 1:nλ
     end
 end
 
+# plot adaptive iterations
+N = length(λadapt)
+MixtureModel()
+# colscheme = [RGB((i-1)*0.7/N, 0.3 + (i-1)*0.7/N, 0.6 + (i-1)*0.2/N) for i = 1:N] # color scheme for model 1
+colscheme = [RGB(0.6 + (i-1)*0.5/N, (i-1) * 0.9/N, (i-1) * 0.7/N) for i = 1:N] # color scheme for model 2
+for i = 
+figs = plot_gibbs_pdf(λadapt, πgibbs1, xplot, GQint, col=colscheme, ttl="Adaptive Iterations")
+plot_multiple_pdfs(biasdist,
+                    Vector(xplot),
+                    lab_bias_arr[1:3],
+                    col_arr[2:4],
+                    normint = GQint,
+                    ttl="Importance sampling biasing distributions")
+
+# vary each parameter independently
+figs = Vector{Figure}(undef, d)
+figsb = Vector{Figure}(undef, d)
+for i = 1:d
+    figs[i] = plot_gibbs_pdf(θsamp, πgibbs0, xplot, GQint, col=colscheme, ttl="Samples with varying θ$i")
+    # save("figures/samples_th$i_param$modnum.png", fb)
+end
+
 
 # plot active subspaces ##################################################################
 
@@ -130,7 +158,10 @@ ny = 200
 
 fa = plot_parameter_space(θ1_rng, θ2_rng, 
                     Q_plot, P_plot,
-                    θmat, asis_arr, col_arr, lab_arr[2:end]; nas=100)
+                    θmat, 
+                    vcat([asref], asis_arr),
+                    vcat([:black], col_arr),
+                    vcat(["Ref."], lab_arr[2:end]); nas=100)
 
 
 
@@ -184,7 +215,7 @@ f4 = plot_val_metric("WSD",
                 lab_arr[2:end],
                 "d(W₁,Ŵ₁)", 
                 "Weighted subspace distance",
-                logscl=false
+                logscl=true
     )
 # save("figures/WSD.png", f4)
 
@@ -270,8 +301,8 @@ f13 = plot_IS_cdf("wESS",
                 lab_bias_arr,
                 "P[ ESS(w)/n < t ]",
                 "ESS of IS weights",
-                limtype = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8], # [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
-                xticklab=[string(i) for i in 0:0.1:0.8], # [string(i) for i in 0:0.2:1],
+                limtype = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], # [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+                xticklab=[string(i) for i in 0:0.1:1], # [string(i) for i in 0:0.2:1],
                 rev = false,
                 logscl=false
 )
@@ -290,7 +321,7 @@ f13 = plot_IS_cdf("wESS",
 
 # plot extraordinary samples ####################################################################
 
-th = 80 # 10^(1.0) # threshold
+th = 1e3 # 10^(1.0) # threshold
 fig15 = plot_IS_samples(πgibbs0,
                 "wvar", 
                 # (metrics_u, metrics_g[0.02], metrics_g[0.2], metrics_g[1.0]),
