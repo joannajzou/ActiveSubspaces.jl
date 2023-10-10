@@ -68,6 +68,7 @@ function rand(d::Gibbs, n::Int, sampler::Sampler, x0::Vector; burn=1000)
     return xsamp[(burn+1):end]
 end
 
+
 # 2 - pdf
 updf(d::Gibbs, x) = exp(-d.β * d.V(x))
 pdf(d::Gibbs, x, integrator::Integrator) = updf(d, x) ./ normconst(d, integrator)
