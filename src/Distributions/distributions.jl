@@ -17,6 +17,17 @@ hasupdf(d::Gibbs) = true
 
 hasupdf(d::Distribution) = false
 
+"""
+function hasapproxnormconst(d::Distribution)
+
+Returns 'true' if distribution d requires an approximation of its normalizing constant.
+# Arguments
+- `d :: Distribution`    : distribution to check
+
+# Outputs
+- `flag :: Bool`        : true or false
+
+"""
 hasapproxnormconst(d::Gibbs) = true
 
 hasapproxnormconst(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs}) = true
