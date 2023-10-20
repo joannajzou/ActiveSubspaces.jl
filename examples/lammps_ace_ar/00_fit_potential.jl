@@ -1,4 +1,13 @@
-include("00_spec_model.jl")
+using ActiveSubspaces
+using AtomsBase
+using Unitful, UnitfulAtomic
+using InteratomicPotentials
+using InteratomicBasisPotentials
+using PotentialLearning
+using LinearAlgebra
+using JuLIP, ACE1, ACE1pack
+using Distributions
+using JLD
 include("plotting_utils.jl")
 
 
@@ -24,7 +33,7 @@ lb, Σ = learn!(lb, ds_train[dpp_inds]; α = 1e-8)
 e_descr_train = sum.(get_values.(get_local_descriptors.(ds_train[dpp_inds])))
 e_descr_test = sum.(get_values.(get_local_descriptors.(ds_test)))
 
-JLD.save("$(simdir)fitting_params.jld",
+JLD.save("$(simdir)fitted_params.jld",
     "dpp_inds", dpp_inds,
     "β", lb.β,
     "Σ", Σ)
@@ -50,12 +59,5 @@ plot_energy(e_test_pred, e_test)
 plot_error(e_train_err)
 plot_error(e_test_err)
 
-# define sampling density on coefficients
-d = length(lb.β)
-Σβ = 2e1*Σ + 1e-12*I(d)
-πβ = MvNormal(lb.β, Σβ)
-JLD.save("$(simdir)coeff_distribution.jld",
-    "μ", lb.β,
-    "Σ", Σβ
-)
+
 
