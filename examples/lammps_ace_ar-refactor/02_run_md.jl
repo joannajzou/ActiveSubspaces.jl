@@ -3,7 +3,7 @@ include("lammps_utils.jl")
 # prepare LAMMPS input scripts for running MD simulation ----------------------------------------------
 
 # draw samples
-nsamp = 5
+nsamp = 2000
 θsamp = [rand(ρθ) for i = 1:nsamp]
 # save to file
 JLD.save("$(simdir)coeff_samples.jld",

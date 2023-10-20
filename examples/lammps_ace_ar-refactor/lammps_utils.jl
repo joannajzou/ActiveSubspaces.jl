@@ -85,10 +85,10 @@ function run_md(
             command(lmp, "pair_coeff * * $(file_dir)parameters.ace Ar")
             
             # computes
-            command(lmp, "compute S all pressure NULL virial") # Stress tensor without kinetic energy component (only the virial)
-            command(lmp, "fix vir all ave/time 1 $dT $dT c_S[1] c_S[2] c_S[3] c_S[6] c_S[5] c_S[4] file $(save_dir)tmp.virial")
-            command(lmp, "compute rdf all rdf 100")      # radial distribution function 
-            command(lmp, "fix frdf all ave/time $dT $(Int(Tend/dT)-1) $Tend c_rdf[*] file $(save_dir)tmp.rdf mode vector")
+            # command(lmp, "compute S all pressure NULL virial") # Stress tensor without kinetic energy component (only the virial)
+            # command(lmp, "fix vir all ave/time 1 $dT $dT c_S[1] c_S[2] c_S[3] c_S[6] c_S[5] c_S[4] file $(save_dir)tmp.virial")
+            # command(lmp, "compute rdf all rdf 100")      # radial distribution function 
+            # command(lmp, "fix frdf all ave/time $dT $(Int(Tend/dT)-1) $Tend c_rdf[*] file $(save_dir)tmp.rdf mode vector")
 
             command(lmp, "compute pe all pe")                       # potential energy
             command(lmp, "fix fpe all ave/time 1 $dT $dT c_pe file $(save_dir)tmp.pe")
