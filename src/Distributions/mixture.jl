@@ -10,13 +10,13 @@ function MixtureModel(MM::MixtureModel,prob::Vector{<:Real})
     return MixtureModel(MM.components, prob)
 end
 
-function MixtureModel(params::Vector, π0::Gibbs) # equal weights
-    πg = [Gibbs(π0, θ=p) for p in params]
+function MixtureModel(params::Vector, π0::Gibbs; β::Vector{<:Real}=π0.β*ones(length(params))) # equal weights
+    πg = [Gibbs(π0, β=βi, θ=p) for (βi,p) in zip(β,params)]
     return MixtureModel(πg)
 end
 
-function MixtureModel(params::Vector, π0::Gibbs, prob::Vector{<:Real})
-    πg = [Gibbs(π0, θ=p) for p in params]
+function MixtureModel(params::Vector, π0::Gibbs, prob::Vector{<:Real}; β::Vector{<:Real}=π0.β*ones(length(params)))
+    πg = [Gibbs(π0, β=βi, θ=p) for (βi,p) in zip(β,params)]
     return MixtureModel(πg, prob)
 end
 
@@ -79,27 +79,29 @@ function rand(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs}
 end 
 
 # 2 - pdf
-function pdf(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs}, x::Float64, integrator::Integrator)
+function pdf(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs}, x::Float64, normint::Integrator)
     p = probs(d)
-    return sum(p_i * pdf(component(d, i), x, integrator) for (i, p_i) in enumerate(p) if !iszero(p_i))
+    return sum(p_i * pdf(component(d, i), x, normint) for (i, p_i) in enumerate(p) if !iszero(p_i))
 end 
 
-function pdf(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs}, xsamp::Vector{Float64}, integrator::Integrator)
+# multiple samples of x
+function pdf(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs}, xsamp::Vector{Float64}, normint::Integrator)
     p = probs(d)
-    return sum(p_i * updf.((component(d, i),), xsamp) ./ normconst(component(d, i), integrator) for (i, p_i) in enumerate(p) if !iszero(p_i))
+    return sum(p_i * updf.((component(d, i),), xsamp) ./ normconst(component(d, i), normint) for (i, p_i) in enumerate(p) if !iszero(p_i))
 end 
 
 
 # 3 - log unnormalized pdf
-function logpdf(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs}, x::Float64, integrator::Integrator)
+function logpdf(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs}, x::Float64, normint::Integrator)
     p = probs(d)
-    lp = logsumexp(log(p_i) + logpdf(component(d, i), x, integrator) for (i, p_i) in enumerate(p) if !iszero(p_i))
+    lp = logsumexp(log(p_i) + logpdf(component(d, i), x, normint) for (i, p_i) in enumerate(p) if !iszero(p_i))
     return lp
 end
 
-function logpdf(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs}, xsamp::Vector{Float64}, integrator::Integrator)
+# multiple samples of x
+function logpdf(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs}, xsamp::Vector{Float64}, normint::Integrator)
     p = probs(d)
-    data = reduce(hcat, [log(p_i) .+ logupdf.((component(d, i),), xsamp) .- log(normconst(component(d, i), integrator)) for (i, p_i) in enumerate(p) if !iszero(p_i)])
+    data = reduce(hcat, [log(p_i) .+ logupdf.((component(d, i),), xsamp) .- log(normconst(component(d, i), normint)) for (i, p_i) in enumerate(p) if !iszero(p_i)])
     lp = logsumexp.([data[i,:] for i = 1:size(data,1)])
     return lp
 end

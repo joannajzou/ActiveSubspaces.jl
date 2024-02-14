@@ -40,6 +40,9 @@ include("Distributions/distributions.jl")
 # functions for computing expectations (QoIs)
 include("QoI/qoi.jl")
 
+# functions for adaptive importance sampling
+include("AdaptiveIS/adaptiveis.jl")
+
 # functions for computing the active subspace
 include("Subspaces/subspaces.jl")
 

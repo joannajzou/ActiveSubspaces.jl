@@ -71,16 +71,16 @@ end
 
 # 2 - pdf
 updf(d::Gibbs, x) = exp(-d.β * d.V(x))
-pdf(d::Gibbs, x, integrator::Integrator) = updf(d, x) ./ normconst(d, integrator)
+pdf(d::Gibbs, x, normint::Integrator) = updf(d, x) ./ normconst(d, normint)
 
 # 3 - normalization constant (partition function)
-function normconst(d::Gibbs, integrator::QuadIntegrator)
-    return sum(integrator.w' * updf.((d,), integrator.ξ))
+function normconst(d::Gibbs, normint::QuadIntegrator)
+    return sum(normint.w' * updf.((d,), normint.ξ))
 end
 
 # 4 - log unnormalized pdf
 logupdf(d::Gibbs, x) = -d.β * d.V(x)
-logpdf(d::Gibbs, x, integrator::Integrator) = logupdf(d, x) - log(normconst(d, integrator))
+logpdf(d::Gibbs, x, normint::Integrator) = logupdf(d, x) - log(normconst(d, normint))
 
 # 5 - gradlogpdf (wrt x)
 gradlogpdf(d::Gibbs, x) = -d.β * d.∇xV(x)

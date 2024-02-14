@@ -8,11 +8,23 @@ Defines the struct for computing the quantity of interest (QoI) as the expected 
 # Arguments
 - `h :: Function`   : function to evaluate expectation, receiving inputs (x,θ)
 - `p :: Gibbs`      : Gibbs (invariant) distribution with θ == nothing (undefined parameters)
+- `∇h :: Union{Function, Nothing} = nothing`   : gradient of h (if nothing, gradient is computed using AutoDiff)
+
 
 """
 @kwdef mutable struct GibbsQoI <: QoI
-    h :: Function                   # function to evaluate expectation, receiving inputs (x,θ)
-    p :: Gibbs                      # Gibbs (invariant) distribution, receiving inputs (x,θ)
+    h :: Function                               # function to evaluate expectation, receiving inputs (x,θ)
+    p :: Gibbs                                  # Gibbs (invariant) distribution, receiving inputs (x,θ)
+    ∇h :: Union{Function, Nothing} = nothing    # gradient of h (if nothing, gradient is computed using AutoDiff)
+    
+    function GibbsQoI(h::Function, p::Gibbs, ∇h::Function)
+        return new(h, p, ∇h)
+    end
+
+    function GibbsQoI(h::Function, p::Gibbs, ∇h::Nothing)
+        return new(h, p, ∇h)
+    end
+
 end
 
 
@@ -155,13 +167,13 @@ See `expectation` for more information.
 """
 function grad_expectation(θ::Union{Real, Vector{<:Real}},
                           qoi::GibbsQoI,
-                          integrator::Integrator;
-                          gradh::Union{Function, Nothing}=nothing)
+                          integrator::Integrator)
+
     # compute gradient of h
-    if gradh === nothing
+    if qoi.∇h === nothing
         ∇θh = (x, γ) -> ForwardDiff.gradient(γ -> qoi.h(x,γ), γ)
     else
-        ∇θh = (x, γ) -> gradh(x, γ)
+        ∇θh = (x, γ) -> qoi.∇h(x, γ)
     end
 
     # compute inner expectation E_p[∇θV]
@@ -177,13 +189,13 @@ end
 
 function grad_expectation(θ::Union{Real, Vector{<:Real}},
                           qoi::GibbsQoI,
-                          integrator::ISIntegrator;
-                          gradh::Union{Function, Nothing}=nothing)
+                          integrator::ISIntegrator)
+
     # compute gradient of h
-    if gradh === nothing
+    if qoi.∇h === nothing
         ∇θh = (x, γ) -> ForwardDiff.gradient(γ -> qoi.h(x,γ), γ)
     else
-        ∇θh = (x, γ) -> gradh(x, γ)
+        ∇θh = (x, γ) -> qoi.∇h(x, γ)
     end
 
     # compute inner expectation E_p[∇θV]
@@ -200,13 +212,13 @@ end
 
 function grad_expectation(θ::Union{Real, Vector{<:Real}},
                           qoi::GibbsQoI,
-                          integrator::ISMixSamples;
-                          gradh::Union{Function, Nothing}=nothing)
+                          integrator::ISMixSamples)
+
     # compute gradient of h
-    if gradh === nothing
+    if qoi.∇h === nothing
         ∇θh = (x, γ) -> ForwardDiff.gradient(γ -> qoi.h(x,γ), γ)
     else
-        ∇θh = (x, γ) -> gradh(x, γ)
+        ∇θh = (x, γ) -> qoi.∇h(x, γ)
     end
 
     # compute inner expectation E_p[∇θV]

@@ -42,8 +42,10 @@ Contains pre-defined Monte Carlo samples from the biasing distribution to evalua
 This method is implemented with the user providing samples from the biasing distribution. 
 
 # Arguments
-- `g :: Distribution`           : biasing distribution
-- `xsamp :: Vector`     : fixed set of samples
+- `g :: Distribution`                               : biasing distribution
+- `xsamp :: Vector`                                 : fixed set of samples
+- `normint :: Union{Integrator, Nothing}`           : integrator for computing normalizing constant of biasing distribution (required for mixture models)
+
 """
 mutable struct ISSamples <: ISIntegrator
     g :: Distribution

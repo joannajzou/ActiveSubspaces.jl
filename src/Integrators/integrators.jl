@@ -1,3 +1,8 @@
+""" 
+    Integrator
+
+    A struct of abstract type Integrator computes the expectation of a function h(x, θ) with respect to an invariant measure p(x, θ).
+"""
 abstract type Integrator end
 
 include("quadrature.jl")

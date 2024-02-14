@@ -1,3 +1,8 @@
+""" 
+    QoI
+
+    A struct of abstract type QoI computes the expectation of a function h(x, θ) with respect to an invariant measure p(x, θ).
+"""
 abstract type QoI end
 
 include("gibbs_qoi.jl")
