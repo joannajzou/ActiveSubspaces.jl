@@ -46,7 +46,7 @@ function sample(lπ::Function, gradlπ::Function, sampler::NUTS, n::Int64, x0::V
     else
         integrator = Leapfrog(sampler.ϵ)
         proposal = HMCKernel(Trajectory{SliceTS}(integrator, ClassicNoUTurn()))
-        samples, _ = AdvancedHMC.sample(hamiltonian, proposal, [x0], n; progress=false)
+        samples, _ = AdvancedHMC.sample(hamiltonian, proposal, x0, n) # ; progress=false)
     end
 
     return samples
