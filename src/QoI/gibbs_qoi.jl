@@ -55,7 +55,7 @@ function expectation(θ::Union{Real, Vector{<:Real}},
     # norm const
     Z = normconst(qoim.p, integrator)
 
-    h̃(x) = qoim.h(x) * updf(qoim.p, x) / Z
+    h̃(x) = qoim.h(x) .* updf(qoim.p, x) ./ Z
     return sum(integrator.w .* h̃.(integrator.ξ))
 end
 
@@ -245,7 +245,7 @@ function expectation_is_stable(xsamp::Vector, ϕ::Function, f::Gibbs, g::Distrib
     elseif hasapproxnormconst(g) # mixture biasing dist
         logupdf.((f,), xsamp) .- logpdf(g, xsamp, normint)
     else # other biasing dist from Distributions.jl
-        logupdf.((f,), xsamp) .- logpdf.((g,), x)
+        logupdf.((f,), xsamp) .- logpdf.((g,), xsamp)
     end
 
     M = maximum(logwt(xsamp))

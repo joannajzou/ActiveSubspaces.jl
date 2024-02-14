@@ -74,9 +74,7 @@ updf(d::Gibbs, x) = exp(-d.β * d.V(x))
 pdf(d::Gibbs, x, normint::Integrator) = updf(d, x) ./ normconst(d, normint)
 
 # 3 - normalization constant (partition function)
-function normconst(d::Gibbs, normint::QuadIntegrator)
-    return sum(normint.w' * updf.((d,), normint.ξ))
-end
+normconst(d::Gibbs, normint::QuadIntegrator) = sum(normint.w .* updf.((d,), normint.ξ))
 
 # 4 - log unnormalized pdf
 logupdf(d::Gibbs, x) = -d.β * d.V(x)
