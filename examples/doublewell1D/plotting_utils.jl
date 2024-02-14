@@ -156,8 +156,8 @@ function plot_val_metric(val_type::String, val_tup::Union{Tuple,Vector}, lab_tup
         # offsets = [exp.(os) for os in offsets]
         for (i, val_i, lab_i) in zip(1:length(val_tup), val_tup, lab_tup)
             val_med = [median(val_i[val_type][k]) for k in nsamp_arr]
-            val_hi = [maximum(val_i[val_type][k]) for k in nsamp_arr] # [percentile(val_i[val_type][k], 75) for k in nsamp_arr] # .+ 1e-6
-            val_lo = [minimum(val_i[val_type][k]) for k in nsamp_arr]# [percentile(val_i[val_type][k], 25) for k in nsamp_arr] # .+ 1e-6
+            val_hi = [percentile(val_i[val_type][k], 75) for k in nsamp_arr] # [maximum(val_i[val_type][k]) for k in nsamp_arr] # 
+            val_lo = [percentile(val_i[val_type][k], 25) for k in nsamp_arr] # [minimum(val_i[val_type][k]) for k in nsamp_arr] #
             offsets = offset_ratio[i]*nsamp_arr
 
             for k = 1:N

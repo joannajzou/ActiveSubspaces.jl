@@ -33,28 +33,28 @@ function compute_covmatrix_ref(quadpts::Tuple, q::GibbsQoI, p::Distribution, int
 end
 
 
-function compute_gradQ(θsamp::Vector{Vector{Float64}}, q::GibbsQoI, integrator::QuadIntegrator; gradh::Function=nothing)
-# computes gradient of Q using MC integration
-    ∇Qgq = map(θ -> grad_expectation(θ, q, integrator, gradh=gradh), θsamp)
+function compute_gradQ(θsamp::Vector{Vector{Float64}}, q::GibbsQoI, integrator::QuadIntegrator)
+# computes gradient of Q using Gauss quadrature
+    ∇Qgq = map(θ -> grad_expectation(θ, q, integrator), θsamp)
     return ∇Qgq
 end
 
 
-function compute_gradQ(θsamp::Vector{Vector{Float64}}, q::GibbsQoI, integrator::MCIntegrator; gradh::Function=nothing)
+function compute_gradQ(θsamp::Vector{Vector{Float64}}, q::GibbsQoI, integrator::MCIntegrator)
 # computes gradient of Q using MC integration
-    ∇Qmc = map(θ -> grad_expectation(θ, q, integrator, gradh=gradh), θsamp)
+    ∇Qmc = map(θ -> grad_expectation(θ, q, integrator), θsamp)
     return ∇Qmc
 end
 
 
-function compute_gradQ(θsamp::Vector{Vector{Float64}}, q::GibbsQoI, integrator::ISIntegrator; gradh::Function=nothing)
+function compute_gradQ(θsamp::Vector{Vector{Float64}}, q::GibbsQoI, integrator::ISIntegrator)
 # computes gradient of Q using IS integration and returns IS diagnostics
     nsamp = length(θsamp)
     ∇Qis, his, wis = init_IS_arrays(nsamp)
     metrics = init_metrics_dict(nsamp)
 
     for k = 1:nsamp
-        t = @elapsed ∇Qis[k], his[k], wis[k] = grad_expectation(θsamp[k], q, integrator; gradh=gradh)
+        t = @elapsed ∇Qis[k], his[k], wis[k] = grad_expectation(θsamp[k], q, integrator)
         println("samp $k: $t sec.")
     end
 
@@ -69,14 +69,14 @@ function compute_gradQ(θsamp::Vector{Vector{Float64}}, q::GibbsQoI, integrator:
 end
 
 
-function compute_gradQ(θsamp::Vector{Vector{Float64}}, q::GibbsQoI, integrator::ISMixSamples; gradh::Function=nothing)
+function compute_gradQ(θsamp::Vector{Vector{Float64}}, q::GibbsQoI, integrator::ISMixSamples)
 # computes gradient of Q using IS integration and returns IS diagnostics
     nsamp = length(θsamp)
     ∇Qis, his, wis, wts = init_IS_arrays_mix(nsamp)
     metrics = init_metrics_dict(nsamp)
 
     for k = 1:nsamp
-        t = @elapsed ∇Qis[k], his[k], wis[k], wts[k] = grad_expectation(θsamp[k], q, integrator; gradh=gradh)
+        t = @elapsed ∇Qis[k], his[k], wis[k], wts[k] = grad_expectation(θsamp[k], q, integrator)
         println("samp $k: $t sec.")
     end
 
@@ -109,6 +109,15 @@ function init_IS_arrays_mix(nsamp)
         return ∇Q_arr, ∇h_arr, w_arr, wts_arr
     end
 
+
+function init_metrics_dict(n::Int64)
+    metrics = Dict{String, Vector}()
+    metrics["θsamp"] = Vector{Vector{Float64}}(undef, n)
+    metrics["wvar"] = Vector{Float64}(undef, n)
+    metrics["wESS"] = Vector{Float64}(undef, n)
+    metrics["wdiag"] = Vector{Float64}(undef, n)
+    return metrics
+end
 
 
 function remove_outliers(θsamp)

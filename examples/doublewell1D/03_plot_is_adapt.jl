@@ -418,3 +418,14 @@ function integrand(x::Vector{<:Real}, θ::Vector, V::Function, π0::Gibbs, normi
     πg = Gibbs(π0, β=β, θ=θ)
     return abs.(V.(x, (θ,))) .* updf.((πg,), x) ./ normconst(πg, normint)
 end
+
+
+function concat_dicts(C_arr::Vector{Dict})
+    Call = Dict{Int64, Vector{Matrix}}()
+    nsamp_arr = collect(keys(C_arr[1]))
+
+    for nsamp in nsamp_arr
+        Call[nsamp] = [C[nsamp] for C in C_arr]
+    end
+    return Call
+end

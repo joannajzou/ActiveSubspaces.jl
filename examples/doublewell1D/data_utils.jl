@@ -34,29 +34,3 @@ function import_data(dir::String, IntType::String, nsamp_arr::Vector{Int64}, nre
     return Cdict
 end
 
-
-function compute_val(Cref::Matrix{Float64}, Cdict::Dict, rdim::Int64)
-    # extract values
-    nsamp_arr = sort(collect(keys(Cdict)))
-    
-    # compute eigenvalues and eigenvectors
-    _, λref, _ = compute_eigenbasis(Cref)
-    λdict, _ = compute_eigenbasis(Cdict, nsamp_arr)
-
-    # compute validation metrics
-    val = Dict{String, Dict}()
-    val["λ1_err"] = Dict{Int64, Vector{Float64}}()
-    val["λ2_err"] = Dict{Int64, Vector{Float64}}()
-    val["Forstner"] = Dict{Int64, Vector{Float64}}()
-    val["WSD"] = Dict{Int64, Vector{Float64}}()
-
-    for nsamp in nsamp_arr
-        val["λ1_err"][nsamp] = [(λi[1] - λref[1]) / λref[1] for λi in λdict[nsamp]]
-        val["λ2_err"][nsamp] = [(λi[2] - λref[2]) / λref[2] for λi in λdict[nsamp]]
-        val["Forstner"][nsamp] = [ForstnerDistance(Cref, Ci) for Ci in Cdict[nsamp]]
-        val["WSD"][nsamp] = [WeightedSubspaceDistance(Cref, Ci, rdim) for Ci in Cdict[nsamp]]
-    end
-
-    return val
-
-end
