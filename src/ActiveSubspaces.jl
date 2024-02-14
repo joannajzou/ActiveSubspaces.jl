@@ -22,7 +22,7 @@ using ForwardDiff
 using AdvancedHMC
 using PotentialLearning
 using InvertedIndices
-using JLD
+# using JLD
 
 
 # functions for standardizing input variables 
@@ -44,7 +44,7 @@ include("QoI/qoi.jl")
 include("AdaptiveIS/adaptiveis.jl")
 
 # functions for computing the active subspace
-include("Subspaces/subspaces.jl")
+include("DimensionReduction/dimensionreduction.jl")
 
 # functions for computing error/diagnostic metrics
 include("Diagnostics/diagnostics.jl")

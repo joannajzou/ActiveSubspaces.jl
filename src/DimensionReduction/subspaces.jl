@@ -1,69 +1,4 @@
 """
-struct Subspace where T <: Real
-    
-Defines the struct containing variables of the active subspace.
-
-# Arguments
-- `C :: Matrix{T}`          : covariance matrix
-- `λ :: Vector{T}`          : eigenvalues of covariance matrix
-- `W1 :: Matrix{T}`         : active subspace
-- `W2 :: Matrix{T}`         : inactive subspace
-- `π_y :: Distribution`     : marginal density of active variable
-- `π_z :: Distribution`     : marginal density of inactive variable
-
-"""
-struct Subspace
-    C :: Matrix{<:Real}           
-    λ :: Vector{<:Real}          
-    W1 :: Matrix{<:Real}         
-    W2 :: Matrix{<:Real}         
-    π_y :: Distribution     
-    π_z :: Distribution  
-end
-
-
-"""
-function compute_covmatrix(dθ::Vector{T}) where T <: Vector{<:Real}
-
-Computes covariance matrix from samples of feature vector dθ.
-
-# Arguments
-- `dθ :: Vector{Vector{<:Real}}`    : samples of feature vector
-
-# Outputs 
-- `C :: Matrix{Real}`            : empirical covariance matrix
-
-""" 
-function compute_covmatrix(dθ::Vector{T}) where T <: Vector{<:Real}
-    return Matrix(Hermitian(mean(di*di' for di in dθ)))
-end
-
-
-"""
-function compute_covmatrix(dθ::Vector{T}, nsamp_arr::Vector{Int64}) where T <: Vector{<:Real}
-
-Computes array of covariance matrices using varying sample sizes of feature vector dθ. All elements of nsamp_arr <= length(dθ).
-
-# Arguments
-- `dθ :: Vector{T}`                         : samples of feature vector
-- `nsamp_arr :: Vector{Int64}`              : subsets of samples
-
-# Outputs 
-- `C_arr :: Dict{Int64, Matrix{Float64}}`   : dictionary with keys being nsamp, values being covariance matrices
-
-""" 
-function compute_covmatrix(dθ::Vector{T}, nsamp_arr::Vector{Int64}) where T <: Vector{<:Real}
-    C_arr = Dict{Int64, Matrix{Float64}}()
-
-    for nsamp in nsamp_arr
-        C_arr[nsamp] = compute_covmatrix(dθ[1:nsamp])
-    end
-
-    return C_arr
-end
-
-
-"""
 function compute_eigenbasis(dθ::Vector{T}) where T <: Vector{<:Real}
 
 Computes eigendecomposition of empirical covariance matrix of feature vector dθ.
@@ -275,32 +210,38 @@ Draws random samples from the active subspace.
 - `θsamp :: Vector{Vector{Float64}}`     : samples transformed into original parameter space
 
 """ 
-function sample_as(n::Int64, as::Subspace)
+function sample_as(n::Int64, as::Subspace; marg=false)
     ysamp = [rand(as.π_y) for i = 1:n] # sample active variable
-    θsamp = transf_to_paramspace_fix.(ysamp, (as,))
+    θsamp = transf_to_paramspace.(ysamp, (as,); marg=marg)
     return ysamp, θsamp
 end
 
 
 """
-function transf_to_paramspace_fix(y::Vector, as::Subspace)
+function transf_to_paramspace(y::Vector, as::Subspace; marg::Bool=false)
 
-Transforms a sample from the active subspace (y) to the original parameter space (θ), fixing the inactive variable at the nominal (mean) value.
+Transforms a sample from the active subspace (y) to the original parameter space (θ). If marg=false, the inactive variable is fixed at the nominal (mean) value. If marg=true, the transformation is computed with marginalization over the inactive variable.
 
 # Arguments
 - `y :: Float or Vector`                 : sample from the active subspace
 - `as :: Subspace`                       : struct containing W1, W2, π_y, π_z  
+- `marg:Bool = false`                    : flag for marginalization over π_z 
 
 # Outputs 
 - `θ :: Vector`                          : sample transformed to the original parameter space 
 
 """ 
-function transf_to_paramspace_fix(y::Vector, as::Subspace)
+function transf_to_paramspace(y::Vector, as::Subspace; marg=false)
     θ = as.W1*y + as.W2*as.π_z.μ
     return θ
 end
 
-function transf_to_paramspace_fix(y::Float64, as::Subspace)
+# TO DO: 
+# function transf_to_paramspace(y::Vector, as::Subspace; marg=true)
+
+# end
+
+function transf_to_paramspace(y::Float64, as::Subspace)
     y = [y]
     return transf_to_paramspace_fix(y, as)
 end
@@ -325,23 +266,3 @@ function transf_to_subspace(θ::Vector, as::Subspace)
 end
 
 
-"""
-function sample_as(n::Int64, as::Subspace)
-
-Samples from the active subspace by marginalization over inactive variables.
-
-# Arguments
-- `n :: Int64`                           : number of samples
-- `as :: Subspace`                       : struct containing W1, W2, π_y, π_z  
-
-# Outputs 
-- `ysamp :: Vector{Vector{Float64}}`     : samples of active variable
-- `θsamp :: Vector{Vector{Float64}}`     : samples transformed into original parameter space
-
-""" 
-# function sample_as(n::Int64, as::Subspace)
-#     # TO DO 
-# end
-
-
-export Subspace, compute_covmatrix, compute_eigenbasis, find_subspaces, compute_marginal, compute_as, sample_as, transf_to_paramspace_fix, transf_to_subspace
