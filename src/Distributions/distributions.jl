@@ -32,6 +32,8 @@ hasapproxnormconst(d::Gibbs) = true
 
 hasapproxnormconst(d::MixtureModel{Union{Univariate,Multivariate}, Continuous, Gibbs}) = true
 
+hasapproxnormconst(d::Uniform) = false
+
 # pdf(d::Distribution, x, integrator::Nothing) = pdf(d, x)
 
 
