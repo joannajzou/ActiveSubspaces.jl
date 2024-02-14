@@ -10,5 +10,3 @@ using Distributions
 using JLD
 
 include("01_spec_model.jl")
-
-include("02_compute_grad.jl")

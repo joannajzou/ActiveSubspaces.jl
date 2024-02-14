@@ -1,11 +1,6 @@
-include("00_spec_model.jl")
-include("define_md_LAMMPS_ace.jl")
-using CairoMakie 
+include("main.jl")
+include("lammps_ace_ar_utils.jl")
 
-# load posterior distribution
-μ = JLD.load("$(simdir)coeff_distribution.jld")["μ"]
-Σ = JLD.load("$(simdir)coeff_distribution.jld")["Σ"]
-πβ = MvNormal(μ, Σ)
 
 
 # function ############################################################################################
@@ -37,13 +32,13 @@ end
 
 
 # compute energy with MD #############################################################################
-nsamp = 500             # number of coefficient samples
+nsamp = 115           # number of coefficient samples
+# 2052
 Temp = 0.6*120          # temperature
-
 Temp_b = 150.0        # higher temp for biasing dist.    
 biasdir = "$(simdir)Temp_$(Temp_b)/"
 
-# βsamp = [rand(πβ) for i = 1:nsamp]
+βsamp = [rand(πβ) for i = 1:nsamp]
 
 # λsamp = JLD.load("$(biasdir)coeff_samples.jld")["βsamp"]
 # nλ = length(λsamp)
@@ -52,23 +47,23 @@ biasdir = "$(simdir)Temp_$(Temp_b)/"
 # λsamp_2 = λsamp[idkeep]
 # nsamp = length(λsamp_2)
 
-βsamp = JLD.load("$(simdir)coeff_samples.jld")["βsamp"]
-nsamp = length(βsamp)
-idskip = JLD.load("$(simdir)coeff_skip.jld")["id_skip"]
-idkeep_β = symdiff(1:nsamp, idskip)
-βsamp_2 = βsamp[idkeep_β]
+# βsamp = JLD.load("$(simdir)coeff_samples.jld")["βsamp"]
+# nsamp = length(βsamp)
+# idskip = JLD.load("$(simdir)coeff_skip.jld")["id_skip"]
+# idkeep_β = symdiff(1:nsamp, idskip)
+# βsamp_2 = βsamp[idkeep_β]
 
-center_ids = Vector{Int64}()
-for iter = 1:4
-    centers = JLD.load("$(simdir)/gradQ_IS_EW_nc=150/gradQ_ISM_$(iter).jld")["centers"]
-    ids = intersection_indices(centers, βsamp_2)
-    center_ids = reduce(vcat, (center_ids, ids))
-end
-center_ids_fin = unique(center_ids)
-βsamp_c = βsamp_2[center_ids_fin]
+# center_ids = Vector{Int64}()
+# for iter = 1:4
+#     centers = JLD.load("$(simdir)/gradQ_IS_EW_nc=150/gradQ_ISM_$(iter).jld")["centers"]
+#     ids = intersection_indices(centers, βsamp_2)
+#     center_ids = reduce(vcat, (center_ids, ids))
+# end
+# center_ids_fin = unique(center_ids)
+# βsamp_c = βsamp_2[center_ids_fin]
 
-# JLD.save("$(biasdir)coeff_samples.jld",
-#         "βsamp", βsamp)
+JLD.save("$(simdir)coeff_samples_1949-2063.jld",
+        "βsamp", βsamp)
 
 
 # compute at mean/nominal get_values
@@ -77,7 +72,9 @@ center_ids_fin = unique(center_ids)
 # iterate over coefficient samples
 for coeff = 1:nsamp       
     try
-        run_md_ar(coeff+500, biasdir, βsamp_c[coeff], Temp_b)
+        # + 1948
+        run_md_ar(coeff+1948, simdir, βsamp[coeff], Temp)
+        # run_md_ar(coeff+500, biasdir, βsamp_c[coeff], Temp_b)
     catch
         println("WARN: run $coeff failed, skipped")
     end

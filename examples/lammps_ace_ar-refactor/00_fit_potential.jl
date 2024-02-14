@@ -33,8 +33,8 @@ test_inds = symdiff(dpp_inds, 1:length(confs))
 ds_train = ds[dpp_inds]; ds_test = ds[test_inds]
 lp = learn!(lb, ds_train, 1e-8) # [10, 1], false)
 
-e_descr_train = sum.(get_values.(get_local_descriptors.(ds_train)))
-e_descr_test = sum.(get_values.(get_local_descriptors.(ds_test)))
+# e_descr_train = sum.(get_values.(get_local_descriptors.(ds_train)))
+# e_descr_test = sum.(get_values.(get_local_descriptors.(ds_test)))
 
 JLD.save("data/fitted_params.jld",
     "dpp_inds", dpp_inds,

@@ -1,5 +1,4 @@
-include("00_spec_model.jl")
-include("qoi_meanenergy.jl")
+include("01_spec_model.jl")
 include("mc_utils.jl")
 # include("plotting_utils.jl")
 
@@ -17,21 +16,22 @@ biasdir = "$(simdir)Temp_$(Temp_b)/"
 βdim = length(μ)
 
 # coeff samples
-βsamp = JLD.load("$(simdir)coeff_samples_aug.jld")["βsamp"]
+βsamp = JLD.load("$(simdir)coeff_samples_2064-4000.jld")["βsamp"]
 nsamp = length(βsamp)
 
 # biasing distribution samples
-λsamp = JLD.load("$(biasdir)coeff_samples.jld")["βsamp"]
-nλ = length(λsamp)
+# λsamp = JLD.load("$(biasdir)coeff_samples.jld")["βsamp"]
+# nλ = length(λsamp)
 
-βaug = reduce(vcat, (βsamp_2, λsamp_2))
-JLD.save("$(simdir)coeff_samples_aug.jld", "βsamp", βaug)
+# βaug = reduce(vcat, (βsamp_2, λsamp_2))
+# JLD.save("$(simdir)coeff_samples_aug.jld", "βsamp", βaug)
 
 
 # Monte Carlo - standard ########################################################################
-∇Qmc, idskip = compute_gradQ(λsamp_2, q, simdir; gradh=∇h) 
-∇Qmc, idskip = compute_gradQ(βsamp_c, q, biasdir; gradh=∇h) 
-# JLD.save("$(biasdir)coeff_skip.jld", "id_skip", idskip)
+# ∇Qmc, idskip = compute_gradQ(λsamp_2, q, simdir; gradh=∇h) 
+# ∇Qmc, idskip = compute_gradQ(βsamp_c, q, biasdir; gradh=∇h) 
+∇Qmc, idskip = compute_gradQ(βsamp, q, simdir) 
+JLD.save("$(simdir)coeff_skip_2064-4000.jld", "id_skip", idskip)
 
 # remove skipped indices
 idskip = JLD.load("$(simdir)coeff_skip.jld")["id_skip"]
@@ -131,15 +131,3 @@ end
 
 
 
-function intersection_indices(arr1, arr2)
-    indices = Int[]
-
-    for (index, value) in enumerate(arr1)
-        id2 = findall(x -> x == value, arr2)
-        if !isempty(id2)
-            push!(indices, id2[1])
-        end
-    end
-
-    return indices
-end

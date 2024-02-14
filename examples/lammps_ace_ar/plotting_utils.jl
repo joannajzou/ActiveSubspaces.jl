@@ -89,31 +89,35 @@ end
 
 # plot eigenspectrum ############################################################################
 function plot_eigenspectrum(λ::Vector{Float64})
-    fig = Figure(resolution=(500,500))
+    fig = Figure(resolution=(450,450))
     ax = Axis(fig[1,1],
-            title="Spectrum of gradient covariance matrix C",
+            title="Spectrum of gradient covariance matrix",
             xlabel="index i",
             ylabel="eigenvalue (λi)",
             xticks = 1:length(λ),
             yscale=log10,
-            xgridvisible=false,
-            ygridvisible=false)
-    scatterlines!(ax, 1:length(λ), λ)
+            # xgridvisible=false,
+            # ygridvisible=false,
+            )
+    scatterlines!(ax, 1:length(λ), λ, markersize=8)
     return fig
 end
 
 
 function plot_eigenspectrum(λ::Vector{T}; labs=1:length(λ)) where T <: Vector{<:Real}
-    fig = Figure(resolution=(600,600))
+    fig = Figure(resolution=(450,450))
     ax = Axis(fig[1,1],
-            title="Spectrum of matrix C",
+            title="Spectrum of gradient covariance matrix",
             xlabel="index i",
             ylabel="eigenvalue (λi)",
-            xticks = 1:length(λ),
+            xticks = 1:length(λ[1]),
             yscale=log10)
 
+    N = length(λ)
+    colscheme = reverse([RGB((i-1)*0.7/N, 0.3 + (i-1)*0.7/N, 0.6 + (i-1)*0.2/N) for i = 1:N])
+
     for k = 1:length(λ)
-        scatterlines!(ax, 1:length(λ[k]), λ[k], label=labs[k])
+        scatterlines!(ax, 1:length(λ[k]), λ[k], markersize=8, label="no. samples: $(labs[k])", color=colscheme[k])
     end
     axislegend(ax)
     return fig
@@ -167,6 +171,30 @@ function plot_eigenvectors(W::Matrix)
         scatterlines!(ax, 1:βdim, W[:,i] .+ 2.5*(βdim+1-i), color=RGB(0, i/βdim, 0), label="ϕ_$i")
     end
     # axislegend(ax, position=:lt)
+    fig
+end
+
+function plot_eigenvectors_row(W::Matrix)
+    d = size(W, 1)
+    fig = Figure(resolution=(1100, 300))
+    ax = Vector{Axis}(undef, d)
+
+    for i = 1:d
+        if i == 1
+            ax[i] = Axis(fig[1,i], xlabel="dimension (i)", ylabel="eigvec. (λi)", limits=(1, βdim, -1, 1), yticks=[-1, 0, 1])
+        elseif i < d/2 + 1
+            ax[i] = Axis(fig[1,i], xlabel="dimension (i)", limits=(1, βdim, -1, 1), yticks=[-1, 0, 1])
+        elseif i == Int(d/2)
+            ax[i] = Axis(fig[1,i], xlabel="dimension (i)", limits=(1, βdim, -1, 1), yticks=[-1, 0, 1])
+        elseif i == d 
+            ax[i] = Axis(fig[2,i-Int(d/2)], xlabel="dimension (i)", limits=(1, βdim, -1, 1), yticks=[-1, 0, 1])
+        else
+            ax[i] = Axis(fig[2,i-Int(d/2)], xlabel="dimension (i)", limits=(1, βdim, -1, 1), yticks=[-1, 0, 1])
+        end
+            
+        # plot
+        scatterlines!(ax[i], 1:d, W[:,i], color=:firebrick)
+    end
     fig
 end
 
@@ -649,40 +677,53 @@ function plot_as_modes(W::Matrix,
         W = reduce(vcat, [W, zeros(d)])
     end
 
-    fig = Figure(resolution=(900, 1300))
-    ax = Vector{Axis}(undef, d)
-    dims = Vector(1:d)
+    with_theme(custom_theme) do
+        fig = Figure(resolution=(1500, 700))
+        ax = Vector{Axis}(undef, d)
+        dims = Vector(1:d)
 
-    for i = 1:d
-        W1 = W[:,i:i] # type as matrix
-        W2 = W[:, dims[Not(i)]]
+        for i = 1:d
+            W1 = W[:,i:i] # type as matrix
+            W2 = W[:, dims[Not(i)]]
 
-        # compute sampling densities
-        π_y = compute_marginal(W1, ρθ2)
-        π_z = compute_marginal(W2, ρθ2)
+            # compute sampling densities
+            π_y = compute_marginal(W1, ρθ2)
+            π_z = compute_marginal(W2, ρθ2)
 
-        # draw samples
-        ysamp = [rand(π_y) for i = 1:ny]
-        θy = [W1*y + W2*π_z.μ for y in ysamp]
+            # draw samples
+            ysamp = [rand(π_y) for i = 1:ny]
+            θy = [W1*y + W2*π_z.μ for y in ysamp]
 
-        # compute energies
-        energies = [Bi' * βi for Bi in B, βi in θy]
+            # compute energies
+            energies = [Bi' * βi for Bi in B, βi in θy]
 
-        # define axis
-        if i < d/2 + 1
-            ax[i] = Axis(fig[i,1], xlabel="r (Å)", ylabel="E (eV)", title="mode $i") # yticks=-0.006:0.002:0.00, limits=(1, 5, -0.008, 0.002)
-        elseif i == Int(d/2)
-            ax[i] = Axis(fig[i,1], xlabel="r (Å)", ylabel="E (eV)", title="mode $i")
-        elseif i == d 
-            ax[i] = Axis(fig[i-Int(d/2),2], xlabel="r (Å)", ylabel="E (eV)", title="mode $i")
-        else
-            ax[i] = Axis(fig[i-Int(d/2),2], xlabel="r (Å)", ylabel="E (eV)", title="mode $i")
+            # define axis
+            if i == 1
+                ax[i] = Axis(fig[1,i],
+                    xlabel="r (Å)",
+                    ylabel="E (eV)",
+                    yticks=[-0.006, -0.004, -0.002, 0.000],
+                    limits=(1,5,-0.008, 0.001),
+                    title="mode $i")
+            elseif i < d/2 + 1
+                ax[i] = Axis(fig[1,i],
+                    xlabel="r (Å)",
+                    yticks=[-0.006, -0.004, -0.002, 0.000],
+                    limits=(1,5,-0.008, 0.001),
+                    title="mode $i")
+            else
+                ax[i] = Axis(fig[2,i-Int(d/2)],
+                    xlabel="r (Å)",
+                    xticks=[-0.006, -0.004, -0.002, 0.000],
+                    limits=(1,5,-0.008, 0.001),
+                    title="mode $i")
+            end
+                
+            # plot
+            [lines!(ax[i], r, energies[:,j]) for j in 1:ny] # color=(:blue, 0.2)
         end
-            
-        # plot
-        [lines!(ax[i], r, energies[:,j]) for j in 1:ny] # color=(:blue, 0.2)
+        fig
     end
-    fig
 end
 
 function plot_as_modes(as::Subspace,
@@ -758,10 +799,38 @@ function _plot_pairwise_potential(θsamp::Vector{T},
                                  B::Vector{T},
                                  ax::Axis;
                                  lab::String="",
-                                 col=:grey) where T <: Vector{<:Real}
+                                 col=:grey,
+                                 α=0.25,
+                                 lw=1) where T <: Vector{<:Real}
 
     energies = [Bi' * θi for Bi in B, θi in θsamp] 
 
-    [lines!(ax, r, energies[:, i], color=(col, 0.3), linewidth=1) for i = 1:(length(θsamp)-1)]
-    lines!(ax, r, energies[:, end], color=(col, 0.3), linewidth=1, label=lab)
+    [lines!(ax, r, energies[:, i], color=(col, α), linewidth=lw) for i = 1:(length(θsamp)-1)]
+    lines!(ax, r, energies[:, end], color=(col, α), linewidth=lw, label=lab)
+end
+
+
+function plot_pairwise_potential(
+    ρθ::Distribution,
+    nsamp::Int64,
+    r::Vector{<:Real},
+    B::Vector{T};
+    scl=1,
+) where T <: Vector{<:Real}
+
+    # adjust scale of covariance
+    ρθ2 = MvNormal(ρθ.μ, scl * ρθ.Σ)
+    θsamp = [rand(ρθ2) for i = 1:nsamp]
+
+    with_theme(custom_theme) do
+        f = Figure(resolution=(500, 500))
+        ax = Axis(f[1, 1], xlabel="interatomic distance r (Å)",
+        ylabel="energies E (eV)",
+        title="Pairwise energy of posterior samples")
+
+        _plot_pairwise_potential(θsamp, r, B, ax, lab="samples")
+        _plot_pairwise_potential([ρθ.μ], r, B, ax, lab="mean", col=:red, α=1.0, lw=2)
+        axislegend(ax, position=:rb)
+        return f
+    end
 end

@@ -1,4 +1,13 @@
-include("lammps_utils.jl")
+include("lammps_ace_ar_utils.jl")
+
+# settings for MD simulation --------------------------------------------------------------------------
+Temp = 0.6*120          # temperature
+Tend = Int(5E6)         # number of steps
+dT = 500                # time step output
+dt = 0.0025
+
+# run MD simulation at mean value ----------------------------------------------
+coeff = "mean"
 
 # prepare LAMMPS input scripts for running MD simulation ----------------------------------------------
 
@@ -35,10 +44,7 @@ for n = 1:nsamp
 end
 
 
-Temp = 0.6*120          # temperature
-Tend = Int(5E6)         # number of steps
-dT = 500                # time step output
-dt = 0.0025
+
 
 for n = 1:nsamp
     println("coeff $n")

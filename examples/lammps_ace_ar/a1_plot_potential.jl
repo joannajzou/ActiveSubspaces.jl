@@ -15,7 +15,7 @@ Tend = Int(5E6)       # number of steps
 dT = 500
 dt = 0.0025
 
-ds0 = load_data("$(biasdir)coeff_$coeff/data.xyz", ExtXYZ(u"eV", u"Å"))
+ds0 = load_data("$(simdir)coeff_$coeff/data.xyz", ExtXYZ(u"eV", u"Å"))
 # Filter first configuration (zero energy)
 ds = ds0[2001:end]
 

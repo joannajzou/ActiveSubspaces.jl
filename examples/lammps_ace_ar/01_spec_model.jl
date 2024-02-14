@@ -33,17 +33,22 @@ end
 
 
 # parameter sampling density --------------------------------------------------------
-μθ = JLD.load("fitted_params.jl")[β]
-Σ0 = JLD.load("fitted_params.jl")[Σ]
+# μθ = JLD.load("fitted_params.jl")[β]
+# Σ0 = JLD.load("fitted_params.jl")[Σ]
 
-d = length(μθ)
-Σθ = 2e1*Σ0 + 1e-12*I(d)
-ρθ = MvNormal(μθ, Σθ)
+# d = length(μθ)
+# Σθ = 2e1*Σ0 + 1e-12*I(d)
+# ρθ = MvNormal(μθ, Σθ)
 
-JLD.save("$(simdir)coeff_distribution.jld",
-    "μ", μθ,
-    "Σ", Σθ
-)
+# JLD.save("$(simdir)coeff_distribution.jld",
+#     "μ", μθ,
+#     "Σ", Σθ
+# )
+
+# load posterior distribution
+μ = JLD.load("$(simdir)coeff_distribution.jld")["μ"]
+Σ = JLD.load("$(simdir)coeff_distribution.jld")["Σ"]
+πβ = MvNormal(μ, Σ)
 
 
 # quantity of interest (QoI) -----------------------------------------------------
@@ -54,3 +59,6 @@ h(x, θ) = V(x, θ)
 # define QoI
 q = GibbsQoI(h=h, ∇h=∇h, p=πgibbs)
 
+q2 = GibbsQoI(h=(x, γ) -> q.h(x, γ)^2,
+        ∇h=(x, γ) -> 2*q.h(x, γ)*q.∇h(x, γ),
+        p = q.p)

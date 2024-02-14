@@ -37,7 +37,7 @@ end
 Σ0 = JLD.load("data/fitted_params.jld")["Σ"]
 
 d = length(μθ)
-Σθ = 2e1*Σ0 + 1e-12*I(d)
+Σθ = 1e1*Σ0 + 1e-12*I(d)
 ρθ = MvNormal(μθ, Σθ)
 
 plot_pairwise_energies(ace, ρθ)
@@ -46,6 +46,9 @@ JLD.save("$(simdir)coeff_distribution.jld",
     "μ", μθ,
     "Σ", Σθ
 )
+
+μθ = JLD.load("coeff_distribution.jld")["μ"]
+Σθ = JLD.load("coeff_distribution.jld")["Σ"]
 
 
 # quantity of interest (QoI) -----------------------------------------------------
