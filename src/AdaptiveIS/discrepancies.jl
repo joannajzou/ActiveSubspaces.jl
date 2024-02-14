@@ -1,3 +1,4 @@
+using LinearAlgebra
 """
     Discrepancy
 
@@ -6,24 +7,27 @@
 abstract type Discrepancy end
 
 
+
 struct MaxMeanDiscrepancy <: Discrepancy
     k::Kernel
 end
 
-
-struct KernelSteinDiscrepancy <: Discrepancy
+"""
+    KernelSteinDiscrepancy <: Discrepancy
+"""
+mutable struct KernelSteinDiscrepancy <: Discrepancy
     k::Kernel
+    qsamp::Vector
 end
 
 function compute_discrepancy(
     sp::Function,
     sq::Function,
-    qsamp::Vector,
     d::KernelSteinDiscrepancy
-    )
-
+)
     δ(x) = sp(x) - sq(x)
-
+    
+    qsamp = d.qsamp
     nq = length(qsamp)
     if nq > 2000
         ids = StatsBase.sample(1:nq, 2000; replace=false)
@@ -40,23 +44,82 @@ end
 function compute_discrepancy(
     p::Distribution,
     q::Distribution,
-    qsamp::Vector,
-    d::Discrepancy
-    )
-
+    d::KernelSteinDiscrepancy
+)
     sp(x) = gradlogpdf(p, x)
     sq(x) = gradlogpdf(q, x)
-    return compute_discrepancy(sp, sq, qsamp, d)
+    return compute_discrepancy(sp, sq, d)
 end
 
 function compute_discrepancy(
     sp::Function,
     q::Distribution,
-    qsamp::Vector,
-    d::Discrepancy
-    )
-
+    d::KernelSteinDiscrepancy
+)
     sq(x) = gradlogpdf(q, x)
-    return compute_discrepancy(sp, sq, qsamp, d)
+    return compute_discrepancy(sp, sq, d)
 end
 
+function compute_discrepancy(
+    p::Distribution,
+    sq::Function,
+    d::KernelSteinDiscrepancy
+)
+    sp(x) = gradlogpdf(p, x)
+    return compute_discrepancy(sp, sq, d)
+end
+
+
+"""
+    KLDivergence <: Discrepancy
+"""
+struct KLDivergence <: Discrepancy
+    int::QuadIntegrator
+end
+
+
+function compute_discrepancy(
+    p::Gibbs,
+    q::Gibbs,
+    d::KLDivergence,
+)
+    Zp = normconst(p, d.int)
+    Zq = normconst(q, d.int)
+
+    h(x) = updf(p, x)/Zp .* ((logupdf(p, x) - log(Zp)) - (logupdf(q, x) - log(Zq)))
+    return sum(d.int.w .* h.(d.int.ξ))
+
+end
+
+
+"""
+    FisherDivergence <: Discrepancy
+"""
+struct FisherDivergence <: Discrepancy
+    int::Integrator
+end
+
+function compute_discrepancy(
+    p::Gibbs,
+    q::Gibbs,
+    d::FisherDivergence,
+)
+    sp(x) = gradlogpdf(p, x)
+    sq(x) = gradlogpdf(q, x)
+
+    if typeof(d.int) <: QuadIntegrator
+        Zp = normconst(p, d.int)
+        h(x) = updf(p, x)/Zp .* norm(sp(x) - sq(x))^2
+        return sum(d.int.w .* h.(d.int.ξ))
+    
+    elseif typeof(d.int) <: MCMC
+        xsamp = rand(p, d.int.n, d.int.sampler, d.int.ρ0) 
+        h = x -> norm(sp(x) - sq(x))^2
+        return sum(h.(xsamp)) / length(xsamp)
+
+    elseif typeof(d.int) <: MCSamples
+        h = x -> norm(sp(x) - sq(x))^2
+        return sum(h.(d.int.xsamp)) / length(d.int.xsamp)
+        
+    end
+end

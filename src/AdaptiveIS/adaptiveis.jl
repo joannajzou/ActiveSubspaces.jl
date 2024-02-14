@@ -59,4 +59,4 @@ export adapt_mixture_IS
 export adapt_mixture_weights, normalize
 export compute_grad_distance
 export compute_grad_kernel
-export KernelSteinDiscrepancy, compute_discrepancy
+export KernelSteinDiscrepancy, KLDivergence, FisherDivergence, compute_discrepancy
